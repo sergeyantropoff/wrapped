@@ -1,0 +1,140 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+{% if request.query_params.get('saved') %}
+<p class="ok" data-i18n="admin.flash.saved">Settings saved.</p>
+{% endif %}
+
+<div class="admin-tabs" id="admin-tabs">
+  <div class="admin-tablist" role="tablist">
+    <button type="button" class="admin-tab active" role="tab" data-tab="limits" data-i18n="admin.tab.limits">Limits</button>
+    <button type="button" class="admin-tab" role="tab" data-tab="rate" data-i18n="admin.tab.rate">Rate limits</button>
+    <button type="button" class="admin-tab" role="tab" data-tab="mime" data-i18n="admin.tab.mime">MIME</button>
+    <button type="button" class="admin-tab" role="tab" data-tab="password" data-i18n="admin.tab.password">Password</button>
+    <button type="button" class="admin-tab" role="tab" data-tab="captcha" data-i18n="admin.tab.captcha">CAPTCHA</button>
+  </div>
+
+  <form method="post" action="/admin/settings" class="admin-form">
+    <section class="admin-tabpanel active" data-panel="limits" role="tabpanel">
+      <h2 data-i18n="admin.limits.title">Limits</h2>
+      <div class="grid-2">
+        <label>
+          <span data-i18n="admin.limits.maxUpload">Max upload (MB)</span>
+          <input name="max_upload_mb" type="number" min="1" step="1"
+                 value="{{ (settings.max_upload_bytes / 1048576)|round|int }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.limits.defaultTtl">Default TTL (hours)</span>
+          <input name="default_ttl_hours" type="number" min="1" step="1"
+                 value="{{ (settings.default_ttl_seconds / 3600)|round|int }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.limits.maxTtl">Max TTL (hours)</span>
+          <input name="max_ttl_hours" type="number" min="1" step="1"
+                 value="{{ (settings.max_ttl_seconds / 3600)|round|int }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.limits.auditRetention">Audit retention (days)</span>
+          <input name="audit_retention_days" type="number" value="{{ settings.audit_retention_days }}" />
+        </label>
+      </div>
+    </section>
+
+    <section class="admin-tabpanel" data-panel="rate" role="tabpanel" hidden>
+      <h2 data-i18n="admin.rate.title">Rate limits (per IP / minute)</h2>
+      <div class="grid-3">
+        <label>
+          <span data-i18n="admin.rate.create">Create</span>
+          <input name="rate_limit_create_per_minute" type="number" value="{{ settings.rate_limit_create_per_minute }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.rate.unwrap">Unwrap</span>
+          <input name="rate_limit_unwrap_per_minute" type="number" value="{{ settings.rate_limit_unwrap_per_minute }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.rate.adminLogin">Admin login</span>
+          <input name="rate_limit_admin_login_per_minute" type="number" value="{{ settings.rate_limit_admin_login_per_minute }}" />
+        </label>
+      </div>
+    </section>
+
+    <section class="admin-tabpanel" data-panel="mime" role="tabpanel" hidden>
+      <h2 data-i18n="admin.mime.title">MIME allowlist</h2>
+      <p class="hint" data-i18n="admin.mime.hint">One pattern per line. Supports exact types and wildcards like image/*.</p>
+      <textarea name="mime_allowlist" rows="14">{% for m in settings.mime_allowlist %}{{ m }}
+{% endfor %}</textarea>
+      <details class="helper">
+        <summary data-i18n="admin.mime.examples">Examples / suggested defaults</summary>
+        <pre class="mono">{% for m in mime_examples %}{{ m }}
+{% endfor %}</pre>
+      </details>
+    </section>
+
+    <section class="admin-tabpanel" data-panel="password" role="tabpanel" hidden>
+      <h2 data-i18n="admin.passwordMode.title">Password mode</h2>
+      {% for mode in password_modes %}
+      <label class="radio-block">
+        <input type="radio" name="password_mode" value="{{ mode.value }}" {% if settings.password_mode == mode %}checked{% endif %} />
+        <span>
+          <strong>{{ mode.value }}</strong>
+          <small data-i18n="admin.passwordMode.{{ mode.value }}">{{ password_mode_help[mode.value] }}</small>
+        </span>
+      </label>
+      {% endfor %}
+    </section>
+
+    <section class="admin-tabpanel" data-panel="captcha" role="tabpanel" hidden>
+      <h2 data-i18n="admin.captcha.title">CAPTCHA</h2>
+      <label>
+        <span data-i18n="admin.captcha.provider">Provider</span>
+        <select name="captcha_provider">
+          {% for p in captcha_providers %}
+          <option value="{{ p.value }}" {% if settings.captcha_provider == p %}selected{% endif %}>{{ p.value }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="grid-2">
+        <label>
+          <span data-i18n="admin.captcha.turnstileSite">Turnstile site key</span>
+          <input name="turnstile_site_key" value="{{ settings.turnstile_site_key }}" />
+        </label>
+        <label>
+          <span data-i18n="admin.captcha.hcaptchaSite">hCaptcha site key</span>
+          <input name="hcaptcha_site_key" value="{{ settings.hcaptcha_site_key }}" />
+        </label>
+      </div>
+      <p class="hint">
+        <span data-i18n="admin.captcha.secrets">Secrets:</span>
+        Turnstile {% if turnstile_secret_set %}<span class="ok" data-i18n="admin.captcha.set">set</span>{% else %}<span class="error" data-i18n="admin.captcha.missing">missing</span>{% endif %}
+        · hCaptcha {% if hcaptcha_secret_set %}<span class="ok" data-i18n="admin.captcha.set">set</span>{% else %}<span class="error" data-i18n="admin.captcha.missing">missing</span>{% endif %}
+        <span data-i18n="admin.captcha.viaEnv">(via env TURNSTILE_SECRET_KEY / HCAPTCHA_SECRET_KEY)</span>
+      </p>
+      <details class="helper" open>
+        <summary data-i18n="admin.captcha.helperTitle">How to get CAPTCHA tokens</summary>
+        <div class="helper-body">
+          <h3>Cloudflare Turnstile</h3>
+          <ol>
+            <li data-i18n="admin.captcha.turnstile.1">Open Cloudflare Turnstile dashboard</li>
+            <li data-i18n="admin.captcha.turnstile.2">Create a site widget for your domain (use localhost for dev)</li>
+            <li data-i18n="admin.captcha.turnstile.3">Copy Site Key into the field above</li>
+            <li data-i18n="admin.captcha.turnstile.4">Copy Secret Key into env TURNSTILE_SECRET_KEY and restart</li>
+            <li data-i18n="admin.captcha.turnstile.5">Set provider to turnstile</li>
+          </ol>
+          <h3>hCaptcha</h3>
+          <ol>
+            <li data-i18n="admin.captcha.hcaptcha.1">Open hCaptcha dashboard</li>
+            <li data-i18n="admin.captcha.hcaptcha.2">New site → copy Sitekey here</li>
+            <li data-i18n="admin.captcha.hcaptcha.3">Secret into env HCAPTCHA_SECRET_KEY, restart</li>
+            <li data-i18n="admin.captcha.hcaptcha.4">Set provider to hcaptcha</li>
+          </ol>
+        </div>
+      </details>
+    </section>
+
+    <div class="admin-tab-actions" id="settings-save-bar">
+      <button class="btn primary" type="submit" data-i18n="admin.settings.save">Save settings</button>
+    </div>
+  </form>
+</div>
+
+<script src="/static/js/admin-tabs.js"></script>
+{% endblock %}

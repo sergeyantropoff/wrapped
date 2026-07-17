@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-panel unwrap-panel">
+  <div class="panel-head">
+    <p class="eyebrow" data-i18n="unwrap.eyebrow">Unwrap</p>
+    <h1 data-i18n="unwrap.title">Reveal once</h1>
+    <p class="lede" data-i18n="unwrap.lede">Paste a wrapped token or open a share link. Ciphertext is fetched once and deleted from the server.</p>
+  </div>
+
+  <div class="composer" id="unwrap-form">
+    <div class="field">
+      <label for="token-input" data-i18n="unwrap.token">Wrapped token or ID</label>
+      <input id="token-input" class="mono" value="{{ wrap_id }}" data-i18n-placeholder="unwrap.tokenPlaceholder" placeholder="wrapped_v1.… или ID" />
+    </div>
+    <div class="field">
+      <label for="unwrap-password" data-i18n="unwrap.password">Password (if set)</label>
+      <input id="unwrap-password" type="password" autocomplete="current-password" />
+    </div>
+    <div id="captcha-slot" class="captcha-slot"></div>
+    <p id="form-error" class="error hidden"></p>
+    <button type="button" id="unwrap-btn" class="btn primary" data-i18n="unwrap.submit">Unwrap</button>
+  </div>
+
+  <div id="result-panel" class="result-panel hidden">
+    <p class="warn" data-i18n="unwrap.destroyed">Server copy destroyed. Preview lives only in this browser session.</p>
+    <div id="items" class="items"></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/crypto.js"></script>
+<script src="/static/js/unwrap.js"></script>
+{% endblock %}

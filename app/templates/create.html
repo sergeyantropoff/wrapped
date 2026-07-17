@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-panel create-panel">
+  <div class="composer">
+    <div class="field-row">
+      <label for="text-language" data-i18n="create.language">Language</label>
+      <select id="text-language">
+        <option value="plaintext" data-i18n="lang.plaintext">Обычный текст</option>
+        <option value="markdown" data-i18n="lang.markdown">Markdown</option>
+        <option value="json" data-i18n="lang.json">JSON</option>
+        <option value="yaml" data-i18n="lang.yaml">YAML</option>
+        <option value="python" data-i18n="lang.python">Python</option>
+        <option value="javascript" data-i18n="lang.javascript">JavaScript</option>
+        <option value="typescript" data-i18n="lang.typescript">TypeScript</option>
+        <option value="go" data-i18n="lang.go">Go</option>
+        <option value="rust" data-i18n="lang.rust">Rust</option>
+        <option value="sql" data-i18n="lang.sql">SQL</option>
+        <option value="bash" data-i18n="lang.bash">Bash</option>
+        <option value="html" data-i18n="lang.html">HTML</option>
+        <option value="css" data-i18n="lang.css">CSS</option>
+      </select>
+    </div>
+
+    <label class="sr-only" for="payload-text" data-i18n="create.text">Text</label>
+    <textarea id="payload-text" class="code-input" spellcheck="false" data-i18n-placeholder="create.textPlaceholder" placeholder="Paste secrets, configs, notes…"></textarea>
+
+    <div id="dropzone" class="dropzone" tabindex="0">
+      <p data-i18n="create.drop">Drop files here, click to browse, or paste a screenshot (⌘V / Ctrl+V)</p>
+      <input id="file-input" type="file" multiple hidden />
+    </div>
+    <ul id="file-list" class="file-list"></ul>
+
+    <div class="grid-2">
+      <div class="field">
+        <label for="ttl-seconds" data-i18n="create.ttl">Time to live</label>
+        <select id="ttl-seconds"></select>
+      </div>
+      <div class="field">
+        <label for="password" data-i18n="create.password">Password (optional)</label>
+        <div class="input-with-action">
+          <input id="password" type="password" autocomplete="new-password" data-i18n-placeholder="create.passwordPlaceholder" placeholder="Extra unlock secret" />
+          <button type="button" class="field-icon-btn" id="generate-password" aria-describedby="generate-password-tip">
+            <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+            <span class="sr-only" data-i18n="create.passwordGenerate">Generate password</span>
+            <span class="ui-tooltip" id="generate-password-tip" role="tooltip" data-i18n="create.passwordGenerateTip">Generate a strong password</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="captcha-slot" class="captcha-slot"></div>
+    <p id="form-error" class="error hidden"></p>
+
+    <div class="actions actions-center">
+      <button type="button" id="wrap-btn" class="btn primary">
+        <span data-i18n="create.submit">Create wrapped token</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="success-panel" class="success-panel hidden">
+    <h2 data-i18n="create.successTitle">Token issued</h2>
+    <p class="warn" data-i18n="create.successWarn">One-time unwrap. After someone opens it, ciphertext is destroyed on the server.</p>
+    <label data-i18n="create.shareLink">Share link</label>
+    <div class="copy-row">
+      <input id="share-link" readonly />
+      <button type="button" class="btn" id="copy-link" data-i18n="common.copy">Copy</button>
+    </div>
+    <label data-i18n="create.token">Wrapped token</label>
+    <div class="copy-row">
+      <input id="share-token" class="mono" readonly />
+      <button type="button" class="btn" id="copy-token" data-i18n="common.copy">Copy</button>
+    </div>
+    <p class="meta" id="expires-meta"></p>
+    <button type="button" class="btn ghost" id="create-another" data-i18n="create.another">Create another</button>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/crypto.js"></script>
+<script src="/static/js/create.js"></script>
+{% endblock %}

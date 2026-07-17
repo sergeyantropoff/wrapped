@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wrapped
+description: Zero-knowledge one-time encrypted drop (Wrapped)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

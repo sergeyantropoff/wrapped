@@ -1,0 +1,112 @@
+{% extends "admin_base.html" %}
+{% block admin_content %}
+<section class="audit-page">
+  <form class="audit-filters" method="get" action="/admin/audit">
+    <input type="hidden" name="page" value="1" />
+    <label class="audit-field">
+      <span data-i18n="admin.audit.eventType">Event type</span>
+      <select name="event_type" id="audit-event-type">
+        <option value="" {% if not event_type %}selected{% endif %} data-i18n="admin.audit.allEvents">All events</option>
+        {% for t in event_types %}
+        <option value="{{ t }}" {% if event_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="audit-field audit-field-grow">
+      <span data-i18n="admin.audit.wrapId">Wrap ID</span>
+      <input name="wrap_id" value="{{ wrap_id }}" class="mono" placeholder="…" autocomplete="off" />
+    </label>
+    <button class="btn primary audit-filter-btn" type="submit" data-i18n="admin.audit.filter">Filter</button>
+  </form>
+
+  <div class="audit-meta">
+    {% if total %}
+    <span class="audit-count">{{ from_idx }}–{{ to_idx }}</span>
+    <span data-i18n="admin.audit.of">of</span>
+    <span class="audit-count">{{ total }}</span>
+    {% else %}
+    <span class="audit-count">0</span>
+    {% endif %}
+    <span data-i18n="admin.audit.events">events</span>
+  </div>
+
+  <div class="audit-table-wrap">
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th data-i18n="admin.audit.col.time">Time</th>
+          <th data-i18n="admin.audit.col.event">Event</th>
+          <th data-i18n="admin.audit.col.ok">OK</th>
+          <th data-i18n="admin.audit.col.wrap">Wrap</th>
+          <th>IP</th>
+          <th>UA</th>
+          <th data-i18n="admin.audit.col.details">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in events %}
+        <tr class="{% if not e.success %}audit-row-fail{% endif %}">
+          <td class="mono audit-time">{{ e.created_at }}</td>
+          <td><span class="audit-event-pill">{{ e.event_type }}</span></td>
+          <td>
+            {% if e.success %}
+            <span class="audit-status ok"><i class="fa-solid fa-check" aria-hidden="true"></i> <span data-i18n="admin.audit.yes">yes</span></span>
+            {% else %}
+            <span class="audit-status fail"><i class="fa-solid fa-xmark" aria-hidden="true"></i> <span data-i18n="admin.audit.no">no</span></span>
+            {% endif %}
+          </td>
+          <td class="mono">{{ e.wrap_id or "—" }}</td>
+          <td class="mono">{{ e.ip or "—" }}</td>
+          <td class="ua" title="{{ e.user_agent or '' }}">{{ e.user_agent or "—" }}</td>
+          <td class="audit-details"><code>{{ e.details }}</code></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="audit-empty" data-i18n="admin.audit.empty">No events</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if has_prev %}
+    <a class="btn" href="/admin/audit?page={{ page - 1 }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      <span data-i18n="admin.audit.prev">Prev</span>
+    </a>
+    {% else %}
+    <span class="btn" aria-disabled="true" disabled>
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      <span data-i18n="admin.audit.prev">Prev</span>
+    </span>
+    {% endif %}
+
+    <span class="pagination-status">
+      <span data-i18n="admin.audit.page">Page</span>
+      {{ page }}
+      <span data-i18n="admin.audit.of">of</span>
+      {{ pages }}
+    </span>
+
+    {% if has_next %}
+    <a class="btn" href="/admin/audit?page={{ page + 1 }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
+      <span data-i18n="admin.audit.next">Next</span>
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </a>
+    {% else %}
+    <span class="btn" aria-disabled="true" disabled>
+      <span data-i18n="admin.audit.next">Next</span>
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </span>
+    {% endif %}
+  </nav>
+  {% endif %}
+</section>
+<script>
+  document.getElementById("audit-event-type")?.addEventListener("change", (e) => {
+    e.target.form?.requestSubmit();
+  });
+</script>
+{% endblock %}

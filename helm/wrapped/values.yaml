@@ -1,0 +1,57 @@
+replicaCount: 1
+
+image:
+  repository: inecs/wrapped
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations:
+    # Pass real client IP to the app (nginx ingress).
+    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
+    nginx.ingress.kubernetes.io/compute-full-forwarded-for: "true"
+    nginx.ingress.kubernetes.io/enable-real-ip: "true"
+  hosts:
+    - host: wrapped.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources: {}
+
+# Use existing Postgres / MinIO (recommended for production release)
+external:
+  databaseUrl: "postgresql+asyncpg://wrapped:wrapped@postgres:5432/wrapped"
+  s3:
+    endpointUrl: "http://minio:9000"
+    accessKey: "wrappedminio"
+    secretKey: "wrappedminio123"
+    bucket: "wrapped"
+    region: "us-east-1"
+    useSsl: false
+    createBucket: false
+
+app:
+  env: production
+  baseUrl: "https://wrapped.local"
+  secretKey: "change-me-in-prod"
+  adminUsername: admin
+  adminPassword: "change-me"
+  logLevel: INFO
+  # Swagger / ReDoc / openapi.json — disabled for k8s by default
+  docsEnabled: false
+  # Trust Ingress / any peer for X-Forwarded-For (ClusterIP is not public).
+  trustedProxies: "*"
+  turnstileSecretKey: ""
+  hcaptchaSecretKey: ""
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
