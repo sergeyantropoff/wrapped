@@ -3,16 +3,12 @@
   const files = [];
   let settings = null;
   let captchaWidgetId = null;
-  let langManual = false;
-  let detectTimer = null;
 
   const els = {
     text: document.getElementById("payload-text"),
     lang: document.getElementById("text-language"),
     langChip: document.getElementById("lang-chip"),
     langChipText: document.getElementById("lang-chip-text"),
-    langChange: document.getElementById("lang-change"),
-    langHint: document.getElementById("lang-hint"),
     langModal: document.getElementById("lang-modal"),
     langGrid: document.getElementById("lang-grid"),
     highlight: document.getElementById("code-highlight"),
@@ -57,11 +53,10 @@
     return t(`lang.${id}`) || id;
   }
 
-  function setLanguage(id, { manual = false, silent = false } = {}) {
+  function setLanguage(id, { silent = false } = {}) {
     const lang = window.WrappedHighlight.languages().includes(id) ? id : "plaintext";
     els.lang.value = lang;
     if (els.langChipText) els.langChipText.textContent = langLabel(lang);
-    if (manual) langManual = true;
     if (!silent) refreshHighlight();
   }
 
@@ -77,47 +72,8 @@
   function syncEditorHeight() {
     if (!els.text || !els.highlight) return;
     els.highlight.parentElement.style.height = "auto";
-    // Keep highlight pre matching textarea scroll height
     const pre = els.highlight.parentElement;
     pre.style.minHeight = `${Math.max(220, els.text.scrollHeight)}px`;
-  }
-
-  function updateLangHint(detection) {
-    if (!els.langHint) return;
-    if (langManual || !els.text.value.trim()) {
-      els.langHint.classList.add("hidden");
-      els.langHint.textContent = "";
-      return;
-    }
-    if (detection.confidence >= 0.6) {
-      els.langHint.classList.add("hidden");
-      els.langHint.textContent = "";
-      return;
-    }
-    const suggestions = (detection.suggestions || [])
-      .filter((l) => l !== detection.lang)
-      .slice(0, 3)
-      .map(langLabel);
-    els.langHint.textContent = suggestions.length
-      ? t("create.languageUnsure", { suggestions: suggestions.join(", ") })
-      : t("create.languageUnsurePlain");
-    els.langHint.classList.remove("hidden");
-  }
-
-  function autoDetectLanguage() {
-    if (langManual) {
-      refreshHighlight();
-      return;
-    }
-    const detection = window.WrappedHighlight.detectLanguage(els.text.value);
-    setLanguage(detection.lang, { silent: true });
-    refreshHighlight();
-    updateLangHint(detection);
-  }
-
-  function scheduleDetect() {
-    clearTimeout(detectTimer);
-    detectTimer = setTimeout(autoDetectLanguage, 220);
   }
 
   function openLangModal() {
@@ -129,8 +85,7 @@
       btn.className = "lang-option" + (id === els.lang.value ? " active" : "");
       btn.textContent = langLabel(id);
       btn.addEventListener("click", () => {
-        setLanguage(id, { manual: true });
-        updateLangHint({ confidence: 1, suggestions: [] });
+        setLanguage(id);
         closeLangModal();
       });
       els.langGrid.appendChild(btn);
@@ -283,20 +238,11 @@
     if (pasted.length) {
       e.preventDefault();
       addFiles(pasted);
-      return;
-    }
-    // Text paste into textarea triggers input; detect after paste event
-    if (document.activeElement === els.text) {
-      setTimeout(() => {
-        langManual = false;
-        autoDetectLanguage();
-      }, 0);
     }
   });
 
   els.text.addEventListener("input", () => {
     refreshHighlight();
-    scheduleDetect();
   });
   els.text.addEventListener("scroll", () => {
     const pre = els.highlight.parentElement;
@@ -305,7 +251,6 @@
   });
 
   els.langChip?.addEventListener("click", openLangModal);
-  els.langChange?.addEventListener("click", openLangModal);
   els.langModal?.addEventListener("click", (e) => {
     if (e.target.closest("[data-lang-close]")) closeLangModal();
   });

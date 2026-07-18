@@ -253,7 +253,31 @@ async def unwrap(
 
     if wrap.has_password and wrap.password_hash:
         max_attempts = max(1, int(settings.password_max_attempts or 3))
-        if not body.password or not verify_password(wrap.password_hash, body.password):
+        # Empty password: ask to enter it, do not burn an attempt.
+        if not (body.password or "").strip():
+            remaining = max(0, max_attempts - int(wrap.password_fail_count or 0))
+            await write_audit(
+                db,
+                event_type="wrap.unwrap",
+                success=False,
+                wrap_id=wrap_id,
+                **meta,
+                details={
+                    "reason": "password_required",
+                    "attempts_remaining": remaining,
+                    "attempts_max": max_attempts,
+                },
+            )
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "password_required",
+                    "attempts_remaining": remaining,
+                    "attempts_max": max_attempts,
+                },
+            )
+
+        if not verify_password(wrap.password_hash, body.password):
             wrap.password_fail_count = int(wrap.password_fail_count or 0) + 1
             remaining = max(0, max_attempts - wrap.password_fail_count)
             now_fail = datetime.now(timezone.utc)

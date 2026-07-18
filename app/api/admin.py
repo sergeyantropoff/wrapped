@@ -20,11 +20,13 @@ from app.services.audit import (
     count_audit,
     list_audit,
     list_audit_event_types,
+    purge_all_audit,
     purge_old_audit,
     write_audit,
 )
 from app.services.rate_limit import rate_limiter
 from app.services.settings_service import PASSWORD_MODE_HELP, get_or_create_settings
+from app.services.stats import collect_stats
 from app.services.wraps import cleanup_expired_meta, expire_due_wraps, purge_all_wraps, request_meta
 
 router = APIRouter(prefix="/admin", include_in_schema=False)
@@ -35,14 +37,14 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("")
 async def admin_root(request: Request):
     if get_admin_user(request):
-        return RedirectResponse("/admin/settings", status_code=302)
+        return RedirectResponse("/admin/stats", status_code=302)
     return RedirectResponse("/admin/login", status_code=302)
 
 
 @router.get("/login")
 async def login_page(request: Request):
     if get_admin_user(request):
-        return RedirectResponse("/admin/settings", status_code=302)
+        return RedirectResponse("/admin/stats", status_code=302)
     return templates.TemplateResponse(
         request,
         "admin_login.html",
@@ -93,7 +95,7 @@ async def login_submit(request: Request, db: AsyncSession = Depends(get_db)):
                 "cleaned_meta": cleaned,
             },
         )
-        response = RedirectResponse("/admin/settings", status_code=302)
+        response = RedirectResponse("/admin/stats", status_code=302)
         set_admin_cookie(response, username)
         return response
 
@@ -120,6 +122,24 @@ async def logout(request: Request, db: AsyncSession = Depends(get_db)):
     response = RedirectResponse("/admin/login", status_code=302)
     clear_admin_cookie(response)
     return response
+
+
+@router.get("/stats")
+async def stats_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _admin: AdminWebAuth = ...,
+):
+    stats = await collect_stats(db)
+    return templates.TemplateResponse(
+        request,
+        "admin_stats.html",
+        {
+            "title": "Stats",
+            "active": "stats",
+            "stats": stats,
+        },
+    )
 
 
 @router.get("/settings")
@@ -353,6 +373,24 @@ async def audit_page(
             "show_pagination": total > 0 and pages > 1,
         },
     )
+
+
+@router.post("/audit/clear")
+async def audit_clear(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    admin: AdminWebAuth = ...,
+):
+    meta = request_meta(request)
+    deleted = await purge_all_audit(db)
+    await write_audit(
+        db,
+        event_type="admin.audit_clear",
+        success=True,
+        **meta,
+        details={"admin": admin, "deleted": deleted},
+    )
+    return RedirectResponse(f"/admin/audit?cleared={deleted}", status_code=302)
 
 
 @api_router.get("/settings", summary="Get admin settings")

@@ -1,5 +1,13 @@
 {% extends "admin_base.html" %}
 {% block admin_content %}
+{% if request.query_params.get('cleared') is not none %}
+<p class="ok">
+  <span data-i18n="admin.audit.clearedPrefix">Cleared</span>
+  <span class="audit-count">{{ request.query_params.get('cleared') }}</span>
+  <span data-i18n="admin.audit.clearedSuffix">audit event(s).</span>
+</p>
+{% endif %}
+
 <section class="audit-page">
   <form class="audit-filters" id="audit-filter-form" method="get" action="/admin/audit">
     <input type="hidden" name="page" value="1" />
@@ -27,15 +35,28 @@
     <button class="btn primary audit-filter-btn" type="submit" data-i18n="admin.audit.filter">Filter</button>
   </form>
 
-  <div class="audit-meta">
-    {% if total %}
-    <span class="audit-count">{{ from_idx }}–{{ to_idx }}</span>
-    <span data-i18n="admin.audit.of">of</span>
-    <span class="audit-count">{{ total }}</span>
-    {% else %}
-    <span class="audit-count">0</span>
-    {% endif %}
-    <span data-i18n="admin.audit.events">events</span>
+  <div class="audit-meta-row">
+    <div class="audit-meta">
+      {% if total %}
+      <span class="audit-count">{{ from_idx }}–{{ to_idx }}</span>
+      <span data-i18n="admin.audit.of">of</span>
+      <span class="audit-count">{{ total }}</span>
+      {% else %}
+      <span class="audit-count">0</span>
+      {% endif %}
+      <span data-i18n="admin.audit.events">events</span>
+    </div>
+    <form method="post" action="/admin/audit/clear" id="audit-clear-form" class="audit-clear-form">
+      <button
+        type="submit"
+        class="btn danger tiny"
+        id="audit-clear-btn"
+        {% if not total %}disabled{% endif %}
+        data-i18n="admin.audit.clear"
+      >
+        Clear
+      </button>
+    </form>
   </div>
 
   <div class="audit-table-wrap">

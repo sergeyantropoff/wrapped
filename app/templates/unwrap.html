@@ -17,14 +17,31 @@
       <input id="unwrap-password" type="password" autocomplete="current-password" />
     </div>
     <div id="captcha-slot" class="captcha-slot"></div>
-    <p id="form-error" class="error hidden"></p>
+    <div id="form-error" class="form-alert danger hidden" role="alert">
+      <span class="form-alert-icon" aria-hidden="true">
+        <i class="fa-solid fa-key"></i>
+      </span>
+      <span class="form-alert-body">
+        <strong id="form-error-title"></strong>
+        <span id="form-error-hint" class="hidden"></span>
+        <span id="form-error-attempts" class="form-alert-attempts hidden"></span>
+      </span>
+    </div>
     <div class="actions actions-center">
       <button type="button" id="unwrap-btn" class="btn primary" data-i18n="unwrap.submit">Unwrap</button>
     </div>
   </div>
 
   <div id="result-panel" class="result-panel hidden">
-    <p class="warn" data-i18n="unwrap.destroyed">Server copy destroyed. Preview lives only in this browser session.</p>
+    <div class="success-callout" role="status">
+      <span class="success-callout-icon" aria-hidden="true">
+        <i class="fa-solid fa-fire"></i>
+      </span>
+      <span class="success-callout-body">
+        <strong data-i18n="unwrap.destroyedTitle">Server copy destroyed</strong>
+        <span data-i18n="unwrap.destroyedHint">Preview lives only in this browser session.</span>
+      </span>
+    </div>
     <div id="items" class="items"></div>
   </div>
 </section>

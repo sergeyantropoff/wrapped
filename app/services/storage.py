@@ -85,5 +85,28 @@ class ObjectStorage:
                 token = resp.get("NextContinuationToken")
         return deleted
 
+    async def prefix_stats(self, prefix: str = "wraps/") -> dict[str, int]:
+        """Count objects and total bytes under prefix."""
+        objects = 0
+        total_bytes = 0
+        async with self.client() as client:
+            token: str | None = None
+            while True:
+                kwargs: dict[str, Any] = {
+                    "Bucket": self.settings.s3_bucket,
+                    "Prefix": prefix,
+                    "MaxKeys": 1000,
+                }
+                if token:
+                    kwargs["ContinuationToken"] = token
+                resp = await client.list_objects_v2(**kwargs)
+                for obj in resp.get("Contents") or []:
+                    objects += 1
+                    total_bytes += int(obj.get("Size") or 0)
+                if not resp.get("IsTruncated"):
+                    break
+                token = resp.get("NextContinuationToken")
+        return {"objects": objects, "bytes": total_bytes}
+
 
 storage = ObjectStorage()

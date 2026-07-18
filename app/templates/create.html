@@ -10,12 +10,8 @@
           <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </button>
       </div>
-      <button type="button" class="btn tiny ghost" id="lang-change" data-i18n="create.languageChange">
-        Change type
-      </button>
       <input type="hidden" id="text-language" value="plaintext" />
     </div>
-    <p id="lang-hint" class="lang-hint hidden"></p>
 
     <label class="sr-only" for="payload-text" data-i18n="create.text">Text</label>
     <div class="code-editor" id="code-editor">
@@ -59,7 +55,15 @@
 
   <div id="success-panel" class="success-panel hidden">
     <h2 data-i18n="create.successTitle">Token issued</h2>
-    <p class="warn" data-i18n="create.successWarn">One-time unwrap. After someone opens it, ciphertext is destroyed on the server.</p>
+    <div class="success-callout" role="status">
+      <span class="success-callout-icon" aria-hidden="true">
+        <i class="fa-solid fa-fire"></i>
+      </span>
+      <span class="success-callout-body">
+        <strong data-i18n="create.successWarnTitle">One-time unwrap</strong>
+        <span data-i18n="create.successWarnHint">After opening, ciphertext is deleted on the server.</span>
+      </span>
+    </div>
     <label data-i18n="create.shareLink">Share link</label>
     <div class="copy-row">
       <input id="share-link" readonly />

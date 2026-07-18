@@ -7,7 +7,7 @@
 - zero-knowledge шифрование на клиенте (AES-GCM)
 - одноразовое открытие (unwrap) — ciphertext удаляется с сервера
 - опциональный пароль с лимитом попыток (по умолчанию 3, настраивается в админке)
-- подсветка синтаксиса (highlight.js), автоопределение языка текста
+- подсветка синтаксиса (highlight.js), ручной выбор языка текста
 - вложения: drag-and-drop, выбор файлов, вставка скриншота из буфера
 - RU / EN, светлая и тёмная тема
 - CAPTCHA: Cloudflare Turnstile и/или hCaptcha
@@ -323,13 +323,14 @@ services:
 
 ## Админка
 
-- UI: `/admin` (логин `/admin/login`)
+- UI: `/admin` (логин `/admin/login`) → после входа открывается **Статистика**
+- **Stats** — MinIO (объём нерасшифрованного ciphertext), расшифровано / pending, загрузки за всё время, статусы wraps, audit-счётчики
 - **Limits** — размер upload, TTL, retention audit
 - **Rate limits** — create / unwrap / admin login
 - **MIME** — allowlist
 - **Password** — режим (`client_only` / `server_gate`) и лимит неверных вводов при unwrap
 - **CAPTCHA** — провайдер и site keys
-- **Audit** — фильтры, пагинация (10/25/50/100 на страницу), номера страниц
+- **Audit** — фильтры, пагинация, очистка лога
 - **Danger** — полная очистка wraps и объектов в MinIO
 - JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`)
 
@@ -348,19 +349,13 @@ services:
 
 Серверного «зашифруй за меня» нет.
 
-При неверном пароле unwrap возвращает `403` с телом вида:
+Ошибки пароля при unwrap — `403`:
 
-```json
-{
-  "detail": {
-    "code": "bad_password",
-    "attempts_remaining": 2,
-    "attempts_max": 3
-  }
-}
-```
-
-После исчерпания попыток: `"code": "password_locked"`, wrap уничтожен.
+| `detail.code` | Когда |
+|---------------|--------|
+| `password_required` | пароль не введён (попытка не списывается) |
+| `bad_password` | неверный пароль (`attempts_remaining` / `attempts_max`) |
+| `password_locked` | попытки исчерпаны, wrap уничтожен |
 
 При `DOCS_ENABLED=true` — Swagger `/docs` и OpenAPI `/openapi.json`.
 

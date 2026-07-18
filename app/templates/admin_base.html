@@ -27,6 +27,10 @@
     </a>
     <div class="admin-top-right">
       <nav class="admin-nav" aria-label="Admin">
+        <a href="/admin/stats" class="admin-nav-link {% if active == 'stats' %}active{% endif %}">
+          <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+          <span data-i18n="admin.nav.stats">Stats</span>
+        </a>
         <a href="/admin/settings" class="admin-nav-link {% if active == 'settings' %}active{% endif %}">
           <i class="fa-solid fa-sliders" aria-hidden="true"></i>
           <span data-i18n="admin.nav.settings">Settings</span>
@@ -62,7 +66,7 @@
     </div>
   </header>
   <main class="admin-shell">
-    <h1 data-i18n="{% if active == 'audit' %}admin.audit.title{% elif active == 'danger' %}admin.danger.title{% else %}admin.settings.title{% endif %}">{{ title }}</h1>
+    <h1 data-i18n="{% if active == 'stats' %}admin.stats.title{% elif active == 'audit' %}admin.audit.title{% elif active == 'danger' %}admin.danger.title{% else %}admin.settings.title{% endif %}">{{ title }}</h1>
     {% block admin_content %}{% endblock %}
   </main>
   <script src="/static/js/i18n.js"></script>

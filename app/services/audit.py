@@ -15,6 +15,7 @@ KNOWN_AUDIT_EVENT_TYPES = [
     "admin.logout",
     "admin.settings_update",
     "admin.purge",
+    "admin.audit_clear",
 ]
 
 
@@ -49,6 +50,13 @@ async def purge_old_audit(db: AsyncSession, retention_days: int) -> int:
     result = await db.execute(delete(AuditEvent).where(AuditEvent.created_at < cutoff))
     await db.commit()
     return result.rowcount or 0
+
+
+async def purge_all_audit(db: AsyncSession) -> int:
+    """Delete all audit events. Returns number of deleted rows."""
+    result = await db.execute(delete(AuditEvent))
+    await db.commit()
+    return int(result.rowcount or 0)
 
 
 def _audit_filters(event_type: str | None, wrap_id: str | None):

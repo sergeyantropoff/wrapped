@@ -1,5 +1,5 @@
 (() => {
-  const t = (k) => window.WrappedI18n.t(k);
+  const t = (k, vars) => window.WrappedI18n.t(k, vars);
   let settings = null;
 
   const els = {
@@ -7,19 +7,60 @@
     password: document.getElementById("unwrap-password"),
     btn: document.getElementById("unwrap-btn"),
     error: document.getElementById("form-error"),
+    errorTitle: document.getElementById("form-error-title"),
+    errorHint: document.getElementById("form-error-hint"),
+    errorAttempts: document.getElementById("form-error-attempts"),
     form: document.getElementById("unwrap-form"),
     result: document.getElementById("result-panel"),
     items: document.getElementById("items"),
     captchaSlot: document.getElementById("captcha-slot"),
   };
 
-  function showError(msg) {
-    els.error.textContent = msg;
+  function showError(title, hint, attempts) {
+    if (!els.error) return;
+    if (els.errorTitle) els.errorTitle.textContent = title || "";
+    if (els.errorHint) {
+      if (hint) {
+        els.errorHint.textContent = hint;
+        els.errorHint.classList.remove("hidden");
+      } else {
+        els.errorHint.textContent = "";
+        els.errorHint.classList.add("hidden");
+      }
+    }
+    if (els.errorAttempts) {
+      if (attempts) {
+        els.errorAttempts.textContent = attempts;
+        els.errorAttempts.classList.remove("hidden");
+      } else {
+        els.errorAttempts.textContent = "";
+        els.errorAttempts.classList.add("hidden");
+      }
+    }
+    // Fallback if structured nodes missing
+    if (!els.errorTitle) els.error.textContent = [title, hint, attempts].filter(Boolean).join(" ");
     els.error.classList.remove("hidden");
   }
 
   function clearError() {
+    if (!els.error) return;
     els.error.classList.add("hidden");
+    if (els.errorTitle) els.errorTitle.textContent = "";
+    if (els.errorHint) {
+      els.errorHint.textContent = "";
+      els.errorHint.classList.add("hidden");
+    }
+    if (els.errorAttempts) {
+      els.errorAttempts.textContent = "";
+      els.errorAttempts.classList.add("hidden");
+    }
+  }
+
+  function attemptsLabel(detail) {
+    const n = Number(detail?.attempts_remaining);
+    const max = Number(detail?.attempts_max);
+    if (!Number.isFinite(n) || !Number.isFinite(max)) return "";
+    return t("unwrap.attemptsLeft", { n, max });
   }
 
   function loadCaptcha() {
@@ -151,24 +192,33 @@
         const detail = err.detail;
         if (detail && typeof detail === "object") {
           if (detail.code === "password_locked") {
-            showError(t("unwrap.passwordLocked"));
+            showError(
+              t("unwrap.passwordLocked"),
+              t("unwrap.passwordLockedHint")
+            );
+            return;
+          }
+          if (detail.code === "password_required") {
+            showError(
+              t("unwrap.passwordRequired"),
+              t("unwrap.passwordRequiredHint"),
+              attemptsLabel(detail)
+            );
+            els.password?.focus();
             return;
           }
           if (detail.code === "bad_password") {
-            const n = Number(detail.attempts_remaining);
-            const max = Number(detail.attempts_max);
-            if (Number.isFinite(n)) {
-              showError(
-                t("unwrap.badPasswordRemaining", {
-                  n,
-                  max: Number.isFinite(max) ? max : n,
-                })
-              );
-              return;
-            }
+            showError(
+              t("unwrap.badPassword"),
+              t("unwrap.badPasswordHint"),
+              attemptsLabel(detail)
+            );
+            els.password?.focus();
+            els.password?.select?.();
+            return;
           }
         }
-        showError(t("unwrap.badPassword"));
+        showError(t("unwrap.badPassword"), t("unwrap.badPasswordHint"));
         return;
       }
       if (!resp.ok) {
@@ -185,9 +235,12 @@
           els.password.value || null
         );
       } catch (err) {
-        if (err.message === "bad_password" || err.message === "password_required") {
-          // Should be rare now (server gates first); keep UX clear.
-          showError(t("unwrap.badPassword"));
+        if (err.message === "password_required") {
+          showError(t("unwrap.passwordRequired"), t("unwrap.passwordRequiredHint"));
+          return;
+        }
+        if (err.message === "bad_password") {
+          showError(t("unwrap.badPassword"), t("unwrap.badPasswordHint"));
           return;
         }
         showError(t("common.error"));
@@ -218,3 +271,4 @@
 
   init().catch(() => showError(t("common.error")));
 })();
+
