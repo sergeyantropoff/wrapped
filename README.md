@@ -5,13 +5,14 @@
 **Возможности**
 
 - zero-knowledge шифрование на клиенте (AES-GCM)
-- одноразовое открытие (unwrap) — ciphertext удаляется с сервера
-- опциональный пароль с лимитом попыток (по умолчанию 3, настраивается в админке)
-- подсветка синтаксиса (highlight.js), ручной выбор языка текста
+- одноразовая расшифровка — ciphertext удаляется с сервера после открытия
+- опциональный пароль: Argon2-проверка до выдачи ciphertext, лимит попыток (по умолчанию 3), пустой пароль попытку не тратит
+- подсветка синтаксиса (highlight.js), ручной выбор языка
 - вложения: drag-and-drop, выбор файлов, вставка скриншота из буфера
+- спиннер с логотипом при создании и расшифровке
 - RU / EN, светлая и тёмная тема
 - CAPTCHA: Cloudflare Turnstile и/или hCaptcha
-- админка: лимиты, TTL, MIME, пароль, CAPTCHA, audit с пагинацией, purge
+- админка: **статистика**, настройки, audit (пагинация + очистка), danger purge
 - Docker Compose и Helm; образ на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped)
 
 Ссылка для получателя: `/w/<id>#<key>` или токен `wrapped_v1.<id>.<key>`. Ключ шифрования в URL-фрагменте (`#...`) на сервер не уходит.
@@ -42,13 +43,13 @@
 |:------------:|:-----------:|
 | ![Токен выдан — светлая](docs/screenshots/token-issued-light.png) | ![Токен выдан — тёмная](docs/screenshots/token-issued-dark.png) |
 
-### Unwrap (открытие)
+### Расшифровка
 
 Одноразовое открытие: ciphertext удаляется на сервере, превью — только в текущей сессии браузера.
 
 | Светлая тема | Тёмная тема |
 |:------------:|:-----------:|
-| ![Unwrap — светлая](docs/screenshots/unwrap-light.png) | ![Unwrap — тёмная](docs/screenshots/unwrap-dark.png) |
+| ![Расшифровка — светлая](docs/screenshots/unwrap-light.png) | ![Расшифровка — тёмная](docs/screenshots/unwrap-dark.png) |
 
 ---
 
@@ -64,7 +65,7 @@ make up           # app + Postgres + MinIO + nginx
 | Сервис | URL |
 |--------|-----|
 | Приложение | http://localhost:8000 |
-| Админка | http://localhost:8000/admin |
+| Админка (статистика) | http://localhost:8000/admin |
 | MinIO Console | http://localhost:9001 (`wrappedminio` / `wrappedminio123`) |
 | Postgres (опционально с хоста) | `127.0.0.1:5433` |
 
@@ -312,8 +313,12 @@ services:
 ## Модель безопасности
 
 - **Zero-knowledge.** Шифрование AES-GCM в браузере. Сервер видит только ciphertext и метаданные (TTL, MIME, размер).
-- **Одноразовое открытие.** После успешного unwrap объект удаляется из S3/MinIO, статус → `consumed`.
-- **Пароль.** При создании с паролем сервер сохраняет Argon2-хеш и проверяет его *до* выдачи ciphertext — опечатка не сжигает пакет сразу. Лимит неверных попыток: `password_max_attempts` в админке (по умолчанию **3**). При исчерпании wrap уничтожается; UI показывает, сколько попыток осталось. В режиме `client_only` пароль также участвует в шифровании на клиенте.
+- **Одноразовая расшифровка.** После успешного открытия объект удаляется из S3/MinIO, статус → `consumed`. Превью остаётся только в сессии браузера.
+- **Пароль.** При создании с паролем сервер сохраняет Argon2-хеш и проверяет его *до* выдачи ciphertext.
+  - пустой пароль → `password_required`, попытка **не** списывается;
+  - неверный пароль → `bad_password`, UI показывает оставшиеся попытки;
+  - лимит: `password_max_attempts` в админке (по умолчанию **3**); при исчерпании wrap уничтожается (`password_locked`);
+  - в `client_only` пароль также участвует в шифровании на клиенте.
 - **CAPTCHA.** Включается в админке; секреты — через env, site keys — в UI.
 - **IP в audit.** Реальный IP — только из заголовков от `TRUSTED_PROXIES`.
 
@@ -323,16 +328,16 @@ services:
 
 ## Админка
 
-- UI: `/admin` (логин `/admin/login`) → после входа открывается **Статистика**
-- **Stats** — MinIO (объём нерасшифрованного ciphertext), расшифровано / pending, загрузки за всё время, статусы wraps, audit-счётчики
-- **Limits** — размер upload, TTL, retention audit
-- **Rate limits** — create / unwrap / admin login
-- **MIME** — allowlist
-- **Password** — режим (`client_only` / `server_gate`) и лимит неверных вводов при unwrap
-- **CAPTCHA** — провайдер и site keys
-- **Audit** — фильтры, пагинация, очистка лога
-- **Danger** — полная очистка wraps и объектов в MinIO
-- JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`)
+Логин: `/admin/login`. После входа — **Статистика** (`/admin/stats`).
+
+| Раздел | URL | Что делает |
+|--------|-----|------------|
+| **Статистика** | `/admin/stats` | MinIO: объём и число объектов нерасшифрованного ciphertext; расшифровано / pending; загрузки и items за всё время; таблица по статусам wraps; с паролем; создано за 24ч/7д; счётчики audit (create/unwrap ok/fail) |
+| **Настройки** | `/admin/settings` | Limits (upload, TTL, retention audit), rate limits, MIME allowlist, пароль (режим + лимит попыток), CAPTCHA |
+| **Аудит** | `/admin/audit` | Фильтры, пагинация (10/25/50/100), номера страниц, кнопка **Очистить** (с подтверждением; пишется событие `admin.audit_clear`) |
+| **Опасная зона** | `/admin/danger` | Полная очистка wraps и объектов в MinIO (`PURGE`) |
+
+JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), тег OpenAPI `Admin`.
 
 ---
 
@@ -356,6 +361,18 @@ services:
 | `password_required` | пароль не введён (попытка не списывается) |
 | `bad_password` | неверный пароль (`attempts_remaining` / `attempts_max`) |
 | `password_locked` | попытки исчерпаны, wrap уничтожен |
+
+Пример:
+
+```json
+{
+  "detail": {
+    "code": "bad_password",
+    "attempts_remaining": 2,
+    "attempts_max": 3
+  }
+}
+```
 
 При `DOCS_ENABLED=true` — Swagger `/docs` и OpenAPI `/openapi.json`.
 
