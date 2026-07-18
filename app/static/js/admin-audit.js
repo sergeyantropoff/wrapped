@@ -1,11 +1,18 @@
 (() => {
   const form = document.getElementById("audit-filter-form");
   const typeSelect = document.getElementById("audit-event-type");
-  if (form && typeSelect) {
-    typeSelect.addEventListener("change", () => form.requestSubmit());
+  const perPage = document.getElementById("audit-per-page");
+
+  function resetToFirstPageAndSubmit() {
+    if (!form) return;
+    const pageInput = form.querySelector('input[name="page"]');
+    if (pageInput) pageInput.value = "1";
+    form.requestSubmit();
   }
 
-  // Human-friendly local timestamps
+  typeSelect?.addEventListener("change", resetToFirstPageAndSubmit);
+  perPage?.addEventListener("change", resetToFirstPageAndSubmit);
+
   document.querySelectorAll(".audit-time[data-ts]").forEach((el) => {
     const raw = el.getAttribute("data-ts");
     if (!raw) return;

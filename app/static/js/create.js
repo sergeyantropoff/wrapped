@@ -1,12 +1,22 @@
 (() => {
-  const t = (k) => window.WrappedI18n.t(k);
+  const t = (k, vars) => window.WrappedI18n.t(k, vars);
   const files = [];
   let settings = null;
   let captchaWidgetId = null;
+  let langManual = false;
+  let detectTimer = null;
 
   const els = {
     text: document.getElementById("payload-text"),
     lang: document.getElementById("text-language"),
+    langChip: document.getElementById("lang-chip"),
+    langChipText: document.getElementById("lang-chip-text"),
+    langChange: document.getElementById("lang-change"),
+    langHint: document.getElementById("lang-hint"),
+    langModal: document.getElementById("lang-modal"),
+    langGrid: document.getElementById("lang-grid"),
+    highlight: document.getElementById("code-highlight"),
+    editor: document.getElementById("code-editor"),
     ttl: document.getElementById("ttl-seconds"),
     password: document.getElementById("password"),
     generatePassword: document.getElementById("generate-password"),
@@ -43,11 +53,103 @@
     });
   }
 
+  function langLabel(id) {
+    return t(`lang.${id}`) || id;
+  }
+
+  function setLanguage(id, { manual = false, silent = false } = {}) {
+    const lang = window.WrappedHighlight.languages().includes(id) ? id : "plaintext";
+    els.lang.value = lang;
+    if (els.langChipText) els.langChipText.textContent = langLabel(lang);
+    if (manual) langManual = true;
+    if (!silent) refreshHighlight();
+  }
+
+  function refreshHighlight() {
+    window.WrappedHighlight.highlightElement(
+      els.highlight,
+      els.text.value,
+      els.lang.value || "plaintext"
+    );
+    syncEditorHeight();
+  }
+
+  function syncEditorHeight() {
+    if (!els.text || !els.highlight) return;
+    els.highlight.parentElement.style.height = "auto";
+    // Keep highlight pre matching textarea scroll height
+    const pre = els.highlight.parentElement;
+    pre.style.minHeight = `${Math.max(220, els.text.scrollHeight)}px`;
+  }
+
+  function updateLangHint(detection) {
+    if (!els.langHint) return;
+    if (langManual || !els.text.value.trim()) {
+      els.langHint.classList.add("hidden");
+      els.langHint.textContent = "";
+      return;
+    }
+    if (detection.confidence >= 0.6) {
+      els.langHint.classList.add("hidden");
+      els.langHint.textContent = "";
+      return;
+    }
+    const suggestions = (detection.suggestions || [])
+      .filter((l) => l !== detection.lang)
+      .slice(0, 3)
+      .map(langLabel);
+    els.langHint.textContent = suggestions.length
+      ? t("create.languageUnsure", { suggestions: suggestions.join(", ") })
+      : t("create.languageUnsurePlain");
+    els.langHint.classList.remove("hidden");
+  }
+
+  function autoDetectLanguage() {
+    if (langManual) {
+      refreshHighlight();
+      return;
+    }
+    const detection = window.WrappedHighlight.detectLanguage(els.text.value);
+    setLanguage(detection.lang, { silent: true });
+    refreshHighlight();
+    updateLangHint(detection);
+  }
+
+  function scheduleDetect() {
+    clearTimeout(detectTimer);
+    detectTimer = setTimeout(autoDetectLanguage, 220);
+  }
+
+  function openLangModal() {
+    if (!els.langModal || !els.langGrid) return;
+    els.langGrid.innerHTML = "";
+    for (const id of window.WrappedHighlight.languages()) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lang-option" + (id === els.lang.value ? " active" : "");
+      btn.textContent = langLabel(id);
+      btn.addEventListener("click", () => {
+        setLanguage(id, { manual: true });
+        updateLangHint({ confidence: 1, suggestions: [] });
+        closeLangModal();
+      });
+      els.langGrid.appendChild(btn);
+    }
+    els.langModal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+  }
+
+  function closeLangModal() {
+    if (!els.langModal) return;
+    els.langModal.classList.add("hidden");
+    document.body.classList.remove("modal-open");
+  }
+
   function renderFiles() {
     els.fileList.innerHTML = "";
     files.forEach((f, idx) => {
       const li = document.createElement("li");
-      li.innerHTML = `<span>${f.name} <small>(${f.type || "file"} · ${f.size} B)</small></span>`;
+      li.innerHTML = `<span>${f.name} <small>(${f.type || "file"} · ${window.WrappedUI.formatBytes(f.size)})</small></span>`;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.textContent = "×";
@@ -102,7 +204,9 @@
 
   function refreshExpiresMeta() {
     if (lastExpiresAt && els.expiresMeta) {
-      els.expiresMeta.textContent = window.WrappedI18n.formatExpires(lastExpiresAt);
+      els.expiresMeta.innerHTML = window.WrappedI18n.formatExpiresHtml
+        ? window.WrappedI18n.formatExpiresHtml(lastExpiresAt)
+        : window.WrappedI18n.formatExpires(lastExpiresAt);
     }
   }
 
@@ -146,6 +250,8 @@
     settings = await resp.json();
     fillTtl();
     loadCaptcha();
+    setLanguage("plaintext", { silent: true });
+    refreshHighlight();
   }
 
   els.dropzone.addEventListener("click", () => els.fileInput.click());
@@ -177,6 +283,35 @@
     if (pasted.length) {
       e.preventDefault();
       addFiles(pasted);
+      return;
+    }
+    // Text paste into textarea triggers input; detect after paste event
+    if (document.activeElement === els.text) {
+      setTimeout(() => {
+        langManual = false;
+        autoDetectLanguage();
+      }, 0);
+    }
+  });
+
+  els.text.addEventListener("input", () => {
+    refreshHighlight();
+    scheduleDetect();
+  });
+  els.text.addEventListener("scroll", () => {
+    const pre = els.highlight.parentElement;
+    pre.scrollTop = els.text.scrollTop;
+    pre.scrollLeft = els.text.scrollLeft;
+  });
+
+  els.langChip?.addEventListener("click", openLangModal);
+  els.langChange?.addEventListener("click", openLangModal);
+  els.langModal?.addEventListener("click", (e) => {
+    if (e.target.closest("[data-lang-close]")) closeLangModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && els.langModal && !els.langModal.classList.contains("hidden")) {
+      closeLangModal();
     }
   });
 
@@ -229,26 +364,28 @@
     }
 
     const password = els.password.value || "";
-    const pack = { version: 1, items };
-    const { ciphertext, keyB64url } = await window.WrappedCrypto.encryptPackage(
-      pack,
-      password || null
-    );
-
-    if (ciphertext.byteLength > settings.max_upload_bytes) {
-      showError(t("create.tooLarge"));
-      return;
-    }
-
     els.wrapBtn.disabled = true;
+    window.WrappedUI.showBusy(t("create.working"));
     try {
+      const pack = { version: 1, items };
+      const { ciphertext, keyB64url } = await window.WrappedCrypto.encryptPackage(
+        pack,
+        password || null
+      );
+
+      if (ciphertext.byteLength > settings.max_upload_bytes) {
+        showError(t("create.tooLarge"));
+        return;
+      }
+
       const body = {
         ciphertext_b64: window.WrappedCrypto.bytesToBase64(ciphertext),
         ttl_seconds: Number(els.ttl.value),
         content_types: contentTypes,
         item_count: items.length,
         has_password: Boolean(password),
-        password: settings.password_mode === "server_gate" && password ? password : null,
+        // Always send password when set so server can gate wrong guesses.
+        password: password || null,
         captcha_token: captchaToken() || null,
       };
       const resp = await fetch("/api/v1/wraps", {
@@ -273,6 +410,7 @@
     } catch {
       showError(t("common.error"));
     } finally {
+      window.WrappedUI.hideBusy();
       els.wrapBtn.disabled = false;
     }
   });
@@ -297,6 +435,9 @@
     window.WrappedI18n.onChange(() => {
       fillTtl();
       refreshExpiresMeta();
+      setLanguage(els.lang.value, { silent: true });
+      refreshHighlight();
+      if (els.langChipText) els.langChipText.textContent = langLabel(els.lang.value);
     });
   }
 

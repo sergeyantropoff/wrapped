@@ -22,6 +22,11 @@
       "create.title": "Wrap. Send. Vanish.",
       "create.lede": "Wrap text, images or files into a one-time token. Encryption happens in your browser — the server never sees plaintext.",
       "create.language": "Highlight language",
+      "create.languageChange": "Change type",
+      "create.languagePickTitle": "Text type",
+      "create.languagePickHint": "Choose how the text should be highlighted.",
+      "create.languageUnsure": "Not sure — maybe: {suggestions}. Or change type.",
+      "create.languageUnsurePlain": "Could not detect type — change type if needed.",
       "create.text": "Text",
       "create.textPlaceholder": "Paste secrets, configs, notes…",
       "create.drop": "Drop files here, click to browse, or paste a screenshot (⌘V / Ctrl+V)",
@@ -31,6 +36,7 @@
       "create.passwordGenerate": "Generate password",
       "create.passwordGenerateTip": "Generate a strong password",
       "create.submit": "Create wrapped token",
+      "create.working": "Encrypting and uploading…",
       "create.openToken": "Open a token",
       "create.successTitle": "Token issued",
       "create.successWarn": "One-time unwrap. After someone opens it, ciphertext is destroyed on the server.",
@@ -40,7 +46,8 @@
       "create.needPayload": "Add text or at least one file.",
       "create.tooLarge": "Package exceeds max size.",
       "create.mimeDenied": "One or more MIME types are not allowed.",
-      "create.expires": "Expires {datetime} · {relative}",
+      "create.expires": "Expires {datetime}",
+      "create.expiresRelative": "{relative}",
       "create.ttl.1h": "1 hour",
       "create.ttl.6h": "6 hours",
       "create.ttl.24h": "24 hours",
@@ -71,14 +78,18 @@
       "unwrap.tokenPlaceholder": "wrapped_v1.… or wrap id",
       "unwrap.password": "Password (if set)",
       "unwrap.submit": "Unwrap",
+      "unwrap.working": "Decrypting…",
       "unwrap.destroyed": "Server copy destroyed. Preview lives only in this browser session.",
       "unwrap.needKey": "Missing encryption key. Open the full share link (with #key) or paste the full wrapped token.",
       "unwrap.badPassword": "Wrong password.",
+      "unwrap.badPasswordRemaining": "Wrong password. Attempts left: {n} of {max}.",
+      "unwrap.passwordLocked": "Too many wrong passwords. This wrap has been destroyed.",
       "unwrap.unavailable": "Unavailable (already used, expired, or invalid).",
       "common.copy": "Copy",
       "common.copied": "Copied",
       "common.download": "Download",
       "common.error": "Something went wrong.",
+      "common.working": "Working…",
       "admin.nav.settings": "Settings",
       "admin.nav.audit": "Audit",
       "admin.nav.danger": "Danger",
@@ -117,8 +128,10 @@
       "admin.mime.hint": "One pattern per line. Supports exact types and wildcards like image/*.",
       "admin.mime.examples": "Examples / suggested defaults",
       "admin.passwordMode.title": "Password mode",
-      "admin.passwordMode.client_only": "Password is verified only in the browser after ciphertext download. Maximum zero-knowledge: the server never checks the password. Best when you trust link secrecy and want strongest ZK.",
-      "admin.passwordMode.server_gate": "Server stores an Argon2id hash and releases ciphertext only after a correct password. Slightly weaker ZK metadata but stops offline bruteforce if someone steals the share link without the password.",
+      "admin.passwordMode.client_only": "Password also wraps ciphertext in the browser. Server stores an Argon2id hash and rejects wrong passwords before the one-time unwrap (mistypes do not burn the package).",
+      "admin.passwordMode.server_gate": "Server stores an Argon2id hash and releases ciphertext only after a correct password. Ciphertext is still encrypted client-side with the same password.",
+      "admin.password.maxAttempts": "Wrong password attempts (unwrap)",
+      "admin.password.maxAttemptsHint": "After this many wrong passwords the wrap is destroyed. Default: 3.",
       "admin.captcha.title": "CAPTCHA",
       "admin.captcha.provider": "Provider",
       "admin.captcha.turnstileSite": "Turnstile site key",
@@ -152,6 +165,7 @@
       "admin.audit.wrapId": "Wrap ID",
       "admin.audit.filter": "Filter",
       "admin.audit.allEvents": "All events",
+      "admin.audit.perPage": "Per page",
       "admin.audit.shown": "events shown",
       "admin.audit.of": "of",
       "admin.audit.events": "events",
@@ -188,6 +202,11 @@
       "create.title": "Упакуй. Отправь. Исчезни.",
       "create.lede": "Упакуй текст, картинки или файлы в одноразовый токен. Шифрование в браузере — сервер не видит plaintext.",
       "create.language": "Язык подсветки",
+      "create.languageChange": "Изменить тип",
+      "create.languagePickTitle": "Тип текста",
+      "create.languagePickHint": "Выберите, как подсвечивать текст.",
+      "create.languageUnsure": "Не уверен — возможно: {suggestions}. Или измените тип.",
+      "create.languageUnsurePlain": "Не удалось определить тип — при необходимости измените вручную.",
       "create.text": "Текст",
       "create.textPlaceholder": "Вставь секреты, конфиги, заметки…",
       "create.drop": "Перетащи файлы, выбери или вставь скриншот из буфера (⌘V / Ctrl+V)",
@@ -197,6 +216,7 @@
       "create.passwordGenerate": "Сгенерировать пароль",
       "create.passwordGenerateTip": "Сгенерировать надёжный пароль",
       "create.submit": "Создать wrapped-токен",
+      "create.working": "Шифрование и загрузка…",
       "create.openToken": "Открыть токен",
       "create.successTitle": "Токен выдан",
       "create.successWarn": "Unwrap один раз. После открытия ciphertext удаляется на сервере.",
@@ -206,7 +226,8 @@
       "create.needPayload": "Добавь текст или хотя бы один файл.",
       "create.tooLarge": "Пакет превышает лимит размера.",
       "create.mimeDenied": "Один или несколько MIME-типов запрещены.",
-      "create.expires": "Истекает {datetime} · {relative}",
+      "create.expires": "Истекает {datetime}",
+      "create.expiresRelative": "{relative}",
       "create.ttl.1h": "1 час",
       "create.ttl.6h": "6 часов",
       "create.ttl.24h": "24 часа",
@@ -237,14 +258,18 @@
       "unwrap.tokenPlaceholder": "wrapped_v1.… или ID",
       "unwrap.password": "Пароль (если задан)",
       "unwrap.submit": "Расшифровать",
+      "unwrap.working": "Расшифровка…",
       "unwrap.destroyed": "Копия на сервере уничтожена. Превью только в этой сессии браузера.",
       "unwrap.needKey": "Нет ключа шифрования. Открой полную ссылку (с #key) или вставь полный wrapped-токен.",
       "unwrap.badPassword": "Неверный пароль.",
+      "unwrap.badPasswordRemaining": "Неверный пароль. Осталось попыток: {n} из {max}.",
+      "unwrap.passwordLocked": "Слишком много неверных паролей. Этот wrap уничтожен.",
       "unwrap.unavailable": "Недоступно (уже использовано, истекло или неверно).",
       "common.copy": "Копировать",
       "common.copied": "Скопировано",
       "common.download": "Скачать",
       "common.error": "Что-то пошло не так.",
+      "common.working": "Подождите…",
       "admin.nav.settings": "Настройки",
       "admin.nav.audit": "Аудит",
       "admin.nav.danger": "Опасная зона",
@@ -283,8 +308,10 @@
       "admin.mime.hint": "Один шаблон на строку. Точные типы и wildcards вроде image/*.",
       "admin.mime.examples": "Примеры / рекомендуемые значения",
       "admin.passwordMode.title": "Режим пароля",
-      "admin.passwordMode.client_only": "Пароль проверяется только в браузере после скачивания ciphertext. Максимальный zero-knowledge: сервер пароль не проверяет. Лучше, если доверяете секретности ссылки.",
-      "admin.passwordMode.server_gate": "Сервер хранит Argon2id-хеш и отдаёт ciphertext только после верного пароля. Чуть слабее ZK по метаданным, но защищает от офлайн-брута при утечке ссылки без пароля.",
+      "admin.passwordMode.client_only": "Пароль также оборачивает ciphertext в браузере. Сервер хранит Argon2id-хеш и отклоняет неверный пароль до одноразового unwrap (опечатка не сжигает пакет).",
+      "admin.passwordMode.server_gate": "Сервер хранит Argon2id-хеш и отдаёт ciphertext только после верного пароля. Ciphertext по-прежнему шифруется на клиенте тем же паролем.",
+      "admin.password.maxAttempts": "Неверных вводов пароля (unwrap)",
+      "admin.password.maxAttemptsHint": "После стольких неверных паролей wrap уничтожается. По умолчанию: 3.",
       "admin.captcha.title": "CAPTCHA",
       "admin.captcha.provider": "Провайдер",
       "admin.captcha.turnstileSite": "Turnstile site key",
@@ -318,6 +345,7 @@
       "admin.audit.wrapId": "Wrap ID",
       "admin.audit.filter": "Фильтр",
       "admin.audit.allEvents": "Все события",
+      "admin.audit.perPage": "На странице",
       "admin.audit.shown": "событий показано",
       "admin.audit.of": "из",
       "admin.audit.events": "событий",
@@ -358,9 +386,11 @@
     return current() === "ru" ? "ru-RU" : "en-GB";
   }
 
-  function formatExpires(iso) {
+  function expiresParts(iso) {
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return String(iso);
+    if (Number.isNaN(d.getTime())) {
+      return { datetime: String(iso), relative: "" };
+    }
     const datetime = new Intl.DateTimeFormat(locale(), {
       day: "numeric",
       month: "long",
@@ -376,7 +406,19 @@
       else if (mins < 60 * 48) relative = t("relative.inHours", { n: Math.round(mins / 60) });
       else relative = t("relative.inDays", { n: Math.round(mins / (60 * 24)) });
     }
-    return t("create.expires", { datetime, relative });
+    return { datetime, relative };
+  }
+
+  function formatExpires(iso) {
+    const { datetime, relative } = expiresParts(iso);
+    return `${t("create.expires", { datetime })} · ${t("create.expiresRelative", { relative })}`;
+  }
+
+  function formatExpiresHtml(iso) {
+    const { datetime, relative } = expiresParts(iso);
+    const main = t("create.expires", { datetime });
+    const rel = t("create.expiresRelative", { relative });
+    return `<span class="expires-main">${main}</span><span class="expires-rel">${rel}</span>`;
   }
 
   function apply() {
@@ -418,5 +460,13 @@
     if (btn) btn.addEventListener("click", toggle);
   });
 
-  window.WrappedI18n = { t, apply, current, locale, formatExpires, onChange };
+  window.WrappedI18n = {
+    t,
+    apply,
+    current,
+    locale,
+    formatExpires,
+    formatExpiresHtml,
+    onChange,
+  };
 })();

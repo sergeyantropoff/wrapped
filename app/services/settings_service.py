@@ -13,14 +13,14 @@ from app.models import (
 
 PASSWORD_MODE_HELP = {
     "client_only": (
-        "Password is verified only in the browser after ciphertext download. "
-        "Maximum zero-knowledge: the server never checks the password. "
-        "Best when you trust link secrecy and want strongest ZK."
+        "Password also wraps ciphertext in the browser (PBKDF2 + AES-GCM). "
+        "Server still stores an Argon2id hash and rejects wrong passwords before "
+        "the one-time unwrap, so a mistyped password does not burn the package."
     ),
     "server_gate": (
         "Server stores an Argon2id hash and releases ciphertext only after a correct password. "
-        "Slightly weaker ZK metadata (server knows password success/fail) but stops offline "
-        "bruteforce if someone steals the share link without the password."
+        "Ciphertext is still encrypted client-side with the same password. "
+        "Stops offline bruteforce if someone steals the share link without the password."
     ),
 }
 
@@ -69,4 +69,5 @@ def public_settings_payload(row: AppSettings) -> dict:
         "hcaptcha_site_key": row.hcaptcha_site_key or "",
         "password_mode": row.password_mode.value,
         "password_mode_description": PASSWORD_MODE_HELP,
+        "password_max_attempts": max(1, int(row.password_max_attempts or 3)),
     }

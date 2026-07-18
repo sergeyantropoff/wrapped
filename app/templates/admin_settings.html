@@ -80,6 +80,20 @@
         </span>
       </label>
       {% endfor %}
+      <label class="admin-field-spaced">
+        <span data-i18n="admin.password.maxAttempts">Wrong password attempts (unwrap)</span>
+        <input
+          name="password_max_attempts"
+          type="number"
+          min="1"
+          max="50"
+          step="1"
+          value="{{ settings.password_max_attempts or 3 }}"
+        />
+        <small class="hint" data-i18n="admin.password.maxAttemptsHint">
+          After this many wrong passwords the wrap is destroyed. Default: 3.
+        </small>
+      </label>
     </section>
 
     <section class="admin-tabpanel" data-panel="captcha" role="tabpanel" hidden>

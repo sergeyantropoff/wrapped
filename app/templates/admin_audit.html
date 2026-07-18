@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 {% block admin_content %}
 <section class="audit-page">
-  <form class="audit-filters" method="get" action="/admin/audit">
+  <form class="audit-filters" id="audit-filter-form" method="get" action="/admin/audit">
     <input type="hidden" name="page" value="1" />
     <label class="audit-field">
       <span data-i18n="admin.audit.eventType">Event type</span>
@@ -15,6 +15,14 @@
     <label class="audit-field audit-field-grow">
       <span data-i18n="admin.audit.wrapId">Wrap ID</span>
       <input name="wrap_id" value="{{ wrap_id }}" class="mono" placeholder="…" autocomplete="off" />
+    </label>
+    <label class="audit-field">
+      <span data-i18n="admin.audit.perPage">Per page</span>
+      <select name="per_page" id="audit-per-page">
+        {% for n in per_page_options %}
+        <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
     </label>
     <button class="btn primary audit-filter-btn" type="submit" data-i18n="admin.audit.filter">Filter</button>
   </form>
@@ -46,7 +54,7 @@
       <tbody>
         {% for e in events %}
         <tr class="{% if not e.success %}audit-row-fail{% endif %}">
-          <td class="mono audit-time">{{ e.created_at }}</td>
+          <td class="mono audit-time" data-ts="{{ e.created_at.isoformat() if e.created_at else '' }}">{{ e.created_at }}</td>
           <td><span class="audit-event-pill">{{ e.event_type }}</span></td>
           <td>
             {% if e.success %}
@@ -69,34 +77,39 @@
     </table>
   </div>
 
-  {% if pages > 1 %}
+  {% if show_pagination %}
   <nav class="pagination" aria-label="Pagination">
     {% if has_prev %}
-    <a class="btn" href="/admin/audit?page={{ page - 1 }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
+    <a class="btn pagination-nav" href="/admin/audit?page={{ page - 1 }}&amp;per_page={{ per_page }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
       <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       <span data-i18n="admin.audit.prev">Prev</span>
     </a>
     {% else %}
-    <span class="btn" aria-disabled="true" disabled>
+    <span class="btn pagination-nav" aria-disabled="true">
       <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
       <span data-i18n="admin.audit.prev">Prev</span>
     </span>
     {% endif %}
 
-    <span class="pagination-status">
-      <span data-i18n="admin.audit.page">Page</span>
-      {{ page }}
-      <span data-i18n="admin.audit.of">of</span>
-      {{ pages }}
-    </span>
+    <div class="pagination-pages">
+      {% for p in page_window %}
+        {% if p is none %}
+        <span class="pagination-ellipsis" aria-hidden="true">…</span>
+        {% elif p == page %}
+        <span class="pagination-page is-current" aria-current="page">{{ p }}</span>
+        {% else %}
+        <a class="pagination-page" href="/admin/audit?page={{ p }}&amp;per_page={{ per_page }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
 
     {% if has_next %}
-    <a class="btn" href="/admin/audit?page={{ page + 1 }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
+    <a class="btn pagination-nav" href="/admin/audit?page={{ page + 1 }}&amp;per_page={{ per_page }}&amp;event_type={{ event_type|urlencode }}&amp;wrap_id={{ wrap_id|urlencode }}">
       <span data-i18n="admin.audit.next">Next</span>
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </a>
     {% else %}
-    <span class="btn" aria-disabled="true" disabled>
+    <span class="btn pagination-nav" aria-disabled="true">
       <span data-i18n="admin.audit.next">Next</span>
       <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
     </span>
@@ -104,9 +117,7 @@
   </nav>
   {% endif %}
 </section>
-<script>
-  document.getElementById("audit-event-type")?.addEventListener("change", (e) => {
-    e.target.form?.requestSubmit();
-  });
-</script>
+{% endblock %}
+{% block admin_scripts %}
+<script src="/static/js/admin-audit.js"></script>
 {% endblock %}

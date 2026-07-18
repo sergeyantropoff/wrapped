@@ -2,14 +2,17 @@
 
 Анонимный сервис одноразовой передачи зашифрованных данных (текст, изображения, файлы). Шифрование выполняется в браузере (Web Crypto), на сервере хранится только ciphertext. После первого успешного открытия пакет удаляется из хранилища.
 
-Возможности:
+**Возможности**
 
-- zero-knowledge шифрование на клиенте
-- одноразовое открытие (unwrap)
-- опциональный пароль (`client_only` или `server_gate`)
+- zero-knowledge шифрование на клиенте (AES-GCM)
+- одноразовое открытие (unwrap) — ciphertext удаляется с сервера
+- опциональный пароль с лимитом попыток (по умолчанию 3, настраивается в админке)
+- подсветка синтаксиса (highlight.js), автоопределение языка текста
+- вложения: drag-and-drop, выбор файлов, вставка скриншота из буфера
+- RU / EN, светлая и тёмная тема
 - CAPTCHA: Cloudflare Turnstile и/или hCaptcha
-- админка с лимитами, TTL, allowlist MIME, audit-логом
-- Docker Compose и Helm
+- админка: лимиты, TTL, MIME, пароль, CAPTCHA, audit с пагинацией, purge
+- Docker Compose и Helm; образ на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped)
 
 Ссылка для получателя: `/w/<id>#<key>` или токен `wrapped_v1.<id>.<key>`. Ключ шифрования в URL-фрагменте (`#...`) на сервер не уходит.
 
@@ -25,7 +28,7 @@
 
 ### Создание с текстом и файлами
 
-Текст с подсветкой синтаксиса, вложения (изображения, документы), TTL и опциональный пароль.
+Текст с подсветкой синтаксиса, вложения, TTL и опциональный пароль.
 
 | Светлая тема | Тёмная тема |
 |:------------:|:-----------:|
@@ -69,19 +72,20 @@ make up           # app + Postgres + MinIO + nginx
 make logs         # логи app
 make down         # остановить
 make clean        # остановить и удалить volumes
+make migrate      # alembic upgrade head (в контейнере app)
 ```
 
-Локальный `docker-compose.yml` **собирает** образ из Dockerfile и монтирует код с `--reload` — это режим разработки. Для сервера используйте готовый образ с Docker Hub (см. ниже).
+Локальный `docker-compose.yml` **собирает** образ из Dockerfile и монтирует код с `--reload` — режим разработки. Для сервера используйте готовый образ с Docker Hub (см. ниже).
+
+При старте контейнер app сам выполняет `alembic upgrade head` (миграции, в т.ч. лимит попыток пароля).
 
 ---
 
 ## Запуск на сервере (Docker Hub + Compose)
 
-Образ приложения публикуется на [Docker Hub](https://hub.docker.com/). На сервере его **не нужно собирать** — достаточно `docker compose pull` / `up`.
+Образ: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped). На сервере **не нужно собирать** — достаточно `docker compose pull` / `up`.
 
 ### 1. Подготовка
-
-Создайте каталог и файлы:
 
 ```bash
 mkdir -p /opt/wrapped && cd /opt/wrapped
@@ -105,7 +109,7 @@ ADMIN_PASSWORD=замените-пароль
 # БД и S3 задаются в compose (см. ниже). Для внешнего Postgres/MinIO
 # переопределите DATABASE_URL и S3_* здесь или в environment сервиса app.
 
-# CAPTCHA (опционально; site keys также можно задать в админке)
+# CAPTCHA (опционально; site keys также в админке)
 TURNSTILE_SECRET_KEY=
 HCAPTCHA_SECRET_KEY=
 
@@ -116,8 +120,6 @@ APP_PORT=8000
 ```
 
 ### 2. `docker-compose.yml` для продакшена
-
-Образ на Docker Hub: `inecs/wrapped` (тег задайте нужный, например `0.1.0`).
 
 ```yaml
 services:
@@ -133,7 +135,6 @@ services:
       - app
 
   app:
-    # Образ с Docker Hub — не build:
     image: inecs/wrapped:0.1.0
     container_name: wrapped-app
     restart: unless-stopped
@@ -160,8 +161,6 @@ services:
         condition: service_started
       minio-init:
         condition: service_completed_successfully
-    # Миграции и старт уже в CMD образа:
-    # alembic upgrade head && uvicorn ...
 
   postgres:
     image: postgres:16-alpine
@@ -213,7 +212,7 @@ volumes:
   wrapped_minio_data:
 ```
 
-Рядом положите `nginx.conf` (прокси на app):
+Рядом — `nginx.conf` (пример также в репозитории: `deploy/nginx.conf`):
 
 ```nginx
 server {
@@ -235,30 +234,25 @@ server {
 }
 ```
 
-Готовый пример конфига также есть в репозитории: `deploy/nginx.conf`.
-
-### 3. Запуск
+### 3. Запуск и обновление
 
 ```bash
 docker compose pull
 docker compose up -d
-docker compose ps
 curl -fsS http://127.0.0.1:8000/health
 ```
 
-Обновление на новую версию образа:
-
 ```bash
-# в .env / compose поменяйте тег, например inecs/wrapped:0.2.0
+# новая версия образа, например 0.2.0
 docker compose pull app
 docker compose up -d app
 ```
 
-HTTPS лучше завернуть снаружи (Caddy, Traefik, nginx на хосте, Cloudflare Tunnel) и проксировать на `${APP_PORT}`. В `APP_BASE_URL` укажите публичный `https://...` URL.
+HTTPS лучше завернуть снаружи (Caddy, Traefik, nginx на хосте, Cloudflare Tunnel). В `APP_BASE_URL` укажите публичный `https://...`.
 
 ### Внешний Postgres и S3/MinIO
 
-Если БД и объектное хранилище уже есть, уберите сервисы `postgres`, `minio`, `minio-init` из compose и задайте:
+Уберите сервисы `postgres`, `minio`, `minio-init` и задайте:
 
 | Переменная | Пример |
 |------------|--------|
@@ -267,10 +261,10 @@ HTTPS лучше завернуть снаружи (Caddy, Traefik, nginx на �
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | ключи |
 | `S3_BUCKET` | `wrapped` |
 | `S3_USE_SSL` | `true` |
-| `S3_CREATE_BUCKET` | `false` (если бакет уже создан) |
+| `S3_CREATE_BUCKET` | `false` (бакет уже есть) |
 | `S3_REGION` | `us-east-1` |
 
-Минимальный compose в этом случае — только `app` (+ опционально `proxy`):
+Минимальный compose — только `app` (+ опционально `proxy`):
 
 ```yaml
 services:
@@ -294,16 +288,15 @@ services:
 |------------|----------|--------------|
 | `APP_NAME` | Имя сервиса | `Wrapped` |
 | `APP_ENV` | `development` / `production` | `development` |
-| `APP_SECRET_KEY` | Секрет сессий/подписей | — смените |
-| `APP_BASE_URL` | Публичный URL (ссылки, редиректы) | `http://localhost:8000` |
-| `DOCS_ENABLED` | `/docs`, `/redoc`, `/openapi.json` | в prod лучше `false` |
+| `APP_SECRET_KEY` | Секрет сессий | — смените |
+| `APP_BASE_URL` | Публичный URL | `http://localhost:8000` |
+| `DOCS_ENABLED` | `/docs`, `/redoc`, `/openapi.json` | в prod — `false` |
 | `LOG_LEVEL` | Уровень логов | `INFO` |
 | `ADMIN_USERNAME` | Логин админки | `admin` |
 | `ADMIN_PASSWORD` | Пароль админки | — смените |
 | `DATABASE_URL` | Postgres (`asyncpg`) | — |
 | `S3_ENDPOINT_URL` | Endpoint MinIO/S3 | — |
-| `S3_ACCESS_KEY` | Access key | — |
-| `S3_SECRET_KEY` | Secret key | — |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Ключи S3 | — |
 | `S3_BUCKET` | Имя бакета | `wrapped` |
 | `S3_REGION` | Регион | `us-east-1` |
 | `S3_USE_SSL` | TLS к S3 | `false` |
@@ -312,70 +305,99 @@ services:
 | `HCAPTCHA_SECRET_KEY` | Секрет hCaptcha | пусто |
 | `TRUSTED_PROXIES` | IP/CIDR прокси для `X-Forwarded-*` | loopback + RFC1918 |
 
-Полный шаблон: `.env.example`.
+Лимиты загрузки, TTL, MIME, CAPTCHA, режим пароля и **число попыток пароля** задаются в админке (таблица `app_settings`), не через env. Полный шаблон env: `.env.example`.
 
 ---
 
 ## Модель безопасности
 
 - **Zero-knowledge.** Шифрование AES-GCM в браузере. Сервер видит только ciphertext и метаданные (TTL, MIME, размер).
-- **Одноразовое открытие.** После успешного unwrap объект удаляется из S3/MinIO, статус wrap → `consumed`.
-- **Пароль.** Режим `client_only` — пароль участвует в ключе на клиенте; `server_gate` — сервер проверяет хеш (Argon2) до выдачи ciphertext.
+- **Одноразовое открытие.** После успешного unwrap объект удаляется из S3/MinIO, статус → `consumed`.
+- **Пароль.** При создании с паролем сервер сохраняет Argon2-хеш и проверяет его *до* выдачи ciphertext — опечатка не сжигает пакет сразу. Лимит неверных попыток: `password_max_attempts` в админке (по умолчанию **3**). При исчерпании wrap уничтожается; UI показывает, сколько попыток осталось. В режиме `client_only` пароль также участвует в шифровании на клиенте.
 - **CAPTCHA.** Включается в админке; секреты — через env, site keys — в UI.
-- **IP в audit.** Реальный IP берётся из заголовков только от `TRUSTED_PROXIES`.
+- **IP в audit.** Реальный IP — только из заголовков от `TRUSTED_PROXIES`.
 
-Ключ в `#fragment` не отправляется на сервер в HTTP-запросе страницы.
+Ключ в `#fragment` не уходит на сервер в запросе страницы.
 
 ---
 
 ## Админка
 
 - UI: `/admin` (логин `/admin/login`)
-- Настройки: лимиты загрузки, TTL, rate limit, MIME allowlist, CAPTCHA, режим пароля, retention audit
-- Audit-лог и опасные операции (purge) — в соответствующих разделах UI
-- JSON Admin API: Basic Auth (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), тег OpenAPI `Admin`
+- **Limits** — размер upload, TTL, retention audit
+- **Rate limits** — create / unwrap / admin login
+- **MIME** — allowlist
+- **Password** — режим (`client_only` / `server_gate`) и лимит неверных вводов при unwrap
+- **CAPTCHA** — провайдер и site keys
+- **Audit** — фильтры, пагинация (10/25/50/100 на страницу), номера страниц
+- **Danger** — полная очистка wraps и объектов в MinIO
+- JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`)
 
 ---
 
-## API (автоматизация)
+## API
 
-Тот же ZK-протокол, что и в UI: сначала шифруете локально, затем:
+Тот же ZK-протокол, что в UI: шифруете локально, затем:
 
 | Метод | Путь | Назначение |
 |-------|------|------------|
-| `GET` | `/api/v1/settings` | Публичные лимиты, CAPTCHA, режим пароля |
+| `GET` | `/api/v1/settings` | Публичные лимиты, CAPTCHA, режим пароля, `password_max_attempts` |
 | `POST` | `/api/v1/wraps` | Загрузить ciphertext + метаданные |
 | `POST` | `/api/v1/wraps/{id}/unwrap` | Одноразово получить ciphertext |
 | `GET` | `/health` | Healthcheck |
 
-Серверного endpoint «зашифруй за меня» нет.
+Серверного «зашифруй за меня» нет.
 
-При `DOCS_ENABLED=true` доступны Swagger `/docs` и OpenAPI `/openapi.json`.
+При неверном пароле unwrap возвращает `403` с телом вида:
+
+```json
+{
+  "detail": {
+    "code": "bad_password",
+    "attempts_remaining": 2,
+    "attempts_max": 3
+  }
+}
+```
+
+После исчерпания попыток: `"code": "password_locked"`, wrap уничтожен.
+
+При `DOCS_ENABLED=true` — Swagger `/docs` и OpenAPI `/openapi.json`.
 
 ---
 
-## Сборка и публикация образа
+## Сборка образа и git
 
-Нужен логин в Docker Hub: `docker login` (пользователь `inecs`).
+### Docker Hub (`make release`)
 
 ```bash
-# Сборка + push на hub.docker.com как inecs/wrapped:0.1.0
-make release IMAGE_TAG=0.1.0
+docker login   # пользователь inecs
 
-# Только собрать и затегать локально (без push)
-make release IMAGE_TAG=0.1.0 PUSH=0
+make release IMAGE_TAG=0.1.0              # build + push inecs/wrapped:0.1.0
+make release IMAGE_TAG=0.1.0 PUSH=0       # только локальный тег
 ```
 
-По умолчанию: `RELEASE_REGISTRY=inecs`, `IMAGE_TAG=0.1.0` → образ `inecs/wrapped:0.1.0`.
-
-Эквивалент вручную:
+Эквивалент:
 
 ```bash
 docker build -t inecs/wrapped:0.1.0 .
 docker push inecs/wrapped:0.1.0
 ```
 
-Образ при старте сам выполняет `alembic upgrade head` и поднимает uvicorn на порту `8000`. Healthcheck: `GET /health`.
+Образ при старте: `alembic upgrade head` + uvicorn `:8000`. Healthcheck: `GET /health`.
+
+### Git (`make push`)
+
+Как в proxmox_api_simulator:
+
+```bash
+make push
+```
+
+1. `git add .`
+2. ввод сообщения коммита (**можно несколько строк**)
+3. **Ctrl-D** — конец ввода
+4. `git push origin HEAD`
 
 ---
 
@@ -385,8 +407,6 @@ docker push inecs/wrapped:0.1.0
 helm upgrade --install wrapped ./helm/wrapped \
   -f my-values.yaml
 ```
-
-В `values.yaml` задайте образ с Hub, внешние DB/S3 и секреты:
 
 ```yaml
 image:
@@ -417,26 +437,27 @@ external:
 
 ---
 
-## Make-цели (разработка)
+## Make-цели
 
 | Цель | Описание |
 |------|----------|
 | `make env` | `.env` из `.env.example` |
-| `make up` | Поднять dev-стек |
-| `make down` / `make clean` | Остановить / с volumes |
-| `make logs` / `make ps` | Логи / статус |
+| `make up` / `make down` / `make clean` | Dev-стек |
+| `make logs` / `make ps` / `make restart` | Логи, статус, рестарт app |
 | `make migrate` | `alembic upgrade head` |
-| `make release` | Сборка образа (+ push) и Helm package |
+| `make revision m="msg"` | Новая alembic-ревизия |
+| `make release` | Образ на Docker Hub (+ Helm package) |
+| `make push` | git add → многострочный commit (Ctrl-D) → push |
 | `make helm-lint` / `make helm-package` | Helm |
 
 ---
 
 ## Требования
 
-- Python 3.12+ (для запуска без Docker)
+- Python 3.12+ (без Docker)
 - PostgreSQL 16+
 - S3-совместимое хранилище (MinIO и т.п.)
-- Docker Compose v2 — для деплоя как выше
+- Docker Compose v2
 
 ---
 

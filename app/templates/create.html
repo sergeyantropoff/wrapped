@@ -2,27 +2,26 @@
 {% block content %}
 <section class="hero-panel create-panel">
   <div class="composer">
-    <div class="field-row">
-      <label for="text-language" data-i18n="create.language">Language</label>
-      <select id="text-language">
-        <option value="plaintext" data-i18n="lang.plaintext">Обычный текст</option>
-        <option value="markdown" data-i18n="lang.markdown">Markdown</option>
-        <option value="json" data-i18n="lang.json">JSON</option>
-        <option value="yaml" data-i18n="lang.yaml">YAML</option>
-        <option value="python" data-i18n="lang.python">Python</option>
-        <option value="javascript" data-i18n="lang.javascript">JavaScript</option>
-        <option value="typescript" data-i18n="lang.typescript">TypeScript</option>
-        <option value="go" data-i18n="lang.go">Go</option>
-        <option value="rust" data-i18n="lang.rust">Rust</option>
-        <option value="sql" data-i18n="lang.sql">SQL</option>
-        <option value="bash" data-i18n="lang.bash">Bash</option>
-        <option value="html" data-i18n="lang.html">HTML</option>
-        <option value="css" data-i18n="lang.css">CSS</option>
-      </select>
+    <div class="lang-bar">
+      <div class="lang-current">
+        <span class="lang-label" data-i18n="create.language">Highlight language</span>
+        <button type="button" class="lang-chip" id="lang-chip" aria-haspopup="dialog">
+          <span id="lang-chip-text">Plain text</span>
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+      </div>
+      <button type="button" class="btn tiny ghost" id="lang-change" data-i18n="create.languageChange">
+        Change type
+      </button>
+      <input type="hidden" id="text-language" value="plaintext" />
     </div>
+    <p id="lang-hint" class="lang-hint hidden"></p>
 
     <label class="sr-only" for="payload-text" data-i18n="create.text">Text</label>
-    <textarea id="payload-text" class="code-input" spellcheck="false" data-i18n-placeholder="create.textPlaceholder" placeholder="Paste secrets, configs, notes…"></textarea>
+    <div class="code-editor" id="code-editor">
+      <pre class="code-highlight" aria-hidden="true"><code id="code-highlight" class="hljs"></code></pre>
+      <textarea id="payload-text" class="code-input" spellcheck="false" data-i18n-placeholder="create.textPlaceholder" placeholder="Paste secrets, configs, notes…"></textarea>
+    </div>
 
     <div id="dropzone" class="dropzone" tabindex="0">
       <p data-i18n="create.drop">Drop files here, click to browse, or paste a screenshot (⌘V / Ctrl+V)</p>
@@ -71,10 +70,22 @@
       <input id="share-token" class="mono" readonly />
       <button type="button" class="btn" id="copy-token" data-i18n="common.copy">Copy</button>
     </div>
-    <p class="meta" id="expires-meta"></p>
+    <p class="expires-meta" id="expires-meta"></p>
     <button type="button" class="btn ghost" id="create-another" data-i18n="create.another">Create another</button>
   </div>
 </section>
+
+<div id="lang-modal" class="modal-root hidden" role="dialog" aria-modal="true" aria-labelledby="lang-modal-title">
+  <div class="modal-backdrop" data-lang-close></div>
+  <div class="modal-panel lang-modal-panel" role="document">
+    <h2 class="modal-title" id="lang-modal-title" data-i18n="create.languagePickTitle">Text type</h2>
+    <p class="modal-message" data-i18n="create.languagePickHint">Choose how the text should be highlighted.</p>
+    <div class="lang-grid" id="lang-grid"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn" data-lang-close data-i18n="modal.confirm.cancel">Cancel</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script src="/static/js/crypto.js"></script>

@@ -12,6 +12,8 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link id="hljs-theme-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" />
+  <link id="hljs-theme-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" disabled />
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -68,8 +70,11 @@
       · <a href="https://devops.org.ru" target="_blank" rel="noopener noreferrer">devops.org.ru</a>
     </p>
   </footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="/static/js/i18n.js"></script>
   <script src="/static/js/theme.js"></script>
+  <script src="/static/js/ui.js"></script>
+  <script src="/static/js/highlight-ui.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

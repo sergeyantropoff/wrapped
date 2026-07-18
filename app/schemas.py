@@ -16,6 +16,7 @@ class PublicSettingsOut(BaseModel):
     hcaptcha_site_key: str
     password_mode: str
     password_mode_description: dict[str, str]
+    password_max_attempts: int
 
 
 class WrapCreateRequest(BaseModel):
@@ -66,6 +67,7 @@ class AdminSettingsUpdate(BaseModel):
     turnstile_site_key: str | None = None
     hcaptcha_site_key: str | None = None
     password_mode: str | None = None
+    password_max_attempts: int | None = Field(default=None, ge=1, le=50)
     audit_retention_days: int | None = None
 
 

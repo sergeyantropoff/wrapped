@@ -63,6 +63,8 @@ class AppSettings(Base):
         Enum(PasswordMode, name="password_mode"),
         default=PasswordMode.client_only,
     )
+    # Wrong unwrap passwords allowed before the wrap is burned (default 3).
+    password_max_attempts: Mapped[int] = mapped_column(Integer, default=3)
     audit_retention_days: Mapped[int] = mapped_column(Integer, default=90)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -85,6 +87,7 @@ class Wrap(Base):
     item_count: Mapped[int] = mapped_column(Integer, default=1)
     has_password: Mapped[bool] = mapped_column(Boolean, default=False)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    password_fail_count: Mapped[int] = mapped_column(Integer, default=0)
     password_mode: Mapped[PasswordMode] = mapped_column(
         Enum(PasswordMode, name="password_mode", create_constraint=False),
         default=PasswordMode.client_only,

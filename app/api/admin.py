@@ -187,6 +187,9 @@ async def settings_save(
         "rate_limit_admin_login_per_minute", row.rate_limit_admin_login_per_minute
     )
     row.audit_retention_days = as_int("audit_retention_days", row.audit_retention_days)
+    row.password_max_attempts = min(
+        50, max(1, as_int("password_max_attempts", row.password_max_attempts or 3))
+    )
     row.turnstile_site_key = str(form.get("turnstile_site_key") or "").strip()
     row.hcaptcha_site_key = str(form.get("hcaptcha_site_key") or "").strip()
 
@@ -274,6 +277,25 @@ async def danger_page(
     )
 
 
+def _audit_page_window(page: int, pages: int, radius: int = 2) -> list[int | None]:
+    """Page numbers with None as ellipsis gaps, e.g. [1, None, 4, 5, 6, None, 20]."""
+    if pages <= 1:
+        return [1] if pages == 1 else []
+    keep = {1, pages, page}
+    for i in range(page - radius, page + radius + 1):
+        if 1 <= i <= pages:
+            keep.add(i)
+    ordered = sorted(keep)
+    window: list[int | None] = []
+    prev = 0
+    for n in ordered:
+        if prev and n - prev > 1:
+            window.append(None)
+        window.append(n)
+        prev = n
+    return window
+
+
 @router.get("/audit")
 async def audit_page(
     request: Request,
@@ -284,7 +306,11 @@ async def audit_page(
     wrap_id = request.query_params.get("wrap_id") or None
     if event_type == "":
         event_type = None
-    per_page = 50
+    try:
+        per_page = int(request.query_params.get("per_page") or "25")
+    except ValueError:
+        per_page = 25
+    per_page = min(100, max(10, per_page))
     try:
         page = max(1, int(request.query_params.get("page") or "1"))
     except ValueError:
@@ -317,11 +343,14 @@ async def audit_page(
             "page": page,
             "pages": pages,
             "per_page": per_page,
+            "per_page_options": [10, 25, 50, 100],
+            "page_window": _audit_page_window(page, pages),
             "total": total,
             "from_idx": from_idx,
             "to_idx": to_idx,
             "has_prev": page > 1,
             "has_next": page < pages,
+            "show_pagination": total > 0 and pages > 1,
         },
     )
 
@@ -340,6 +369,7 @@ async def admin_settings_api(
             "mime_allowlist": row.mime_allowlist,
             "captcha_provider": row.captcha_provider.value,
             "password_mode": row.password_mode.value,
+            "password_max_attempts": row.password_max_attempts,
             "audit_retention_days": row.audit_retention_days,
             "rate_limit_create_per_minute": row.rate_limit_create_per_minute,
             "rate_limit_unwrap_per_minute": row.rate_limit_unwrap_per_minute,

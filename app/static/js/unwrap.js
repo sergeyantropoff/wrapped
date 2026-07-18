@@ -70,44 +70,53 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
+  function makeDownloadBtn(onClick) {
+    const btn = document.createElement("button");
+    btn.className = "btn download-btn";
+    btn.type = "button";
+    btn.innerHTML = `<i class="fa-solid fa-download" aria-hidden="true"></i><span>${t("common.download")}</span>`;
+    btn.addEventListener("click", onClick);
+    return btn;
+  }
+
   function renderPackage(pack) {
     els.items.innerHTML = "";
     for (const item of pack.items || []) {
       const card = document.createElement("div");
       card.className = "item-card";
       if (item.type === "text") {
-        card.innerHTML = `<div><strong>text</strong> · <span class="mono">${item.language || "plaintext"}</span></div>`;
+        const lang = item.language || "plaintext";
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        head.innerHTML = `<div><strong>text</strong> · <span class="mono">${lang}</span></div>`;
+        head.appendChild(
+          makeDownloadBtn(() => {
+            downloadBlob(
+              `wrapped-${lang}.txt`,
+              new Blob([item.content || ""], { type: "text/plain" })
+            );
+          })
+        );
+        card.appendChild(head);
         const pre = document.createElement("pre");
-        pre.textContent = item.content || "";
+        const code = document.createElement("code");
+        pre.appendChild(code);
         card.appendChild(pre);
-        const btn = document.createElement("button");
-        btn.className = "btn";
-        btn.type = "button";
-        btn.textContent = t("common.download");
-        btn.addEventListener("click", () => {
-          downloadBlob(
-            `wrapped-${item.language || "text"}.txt`,
-            new Blob([item.content || ""], { type: "text/plain" })
-          );
-        });
-        card.appendChild(btn);
+        window.WrappedHighlight.highlightElement(code, item.content || "", lang);
       } else if (item.type === "file") {
         const bytes = window.WrappedCrypto.base64ToBytes(item.data_b64);
         const blob = new Blob([bytes], { type: item.mime || "application/octet-stream" });
-        card.innerHTML = `<div><strong>${item.name}</strong> · <span class="mono">${item.mime}</span> · ${bytes.length} B</div>`;
+        const head = document.createElement("div");
+        head.className = "item-card-head";
+        head.innerHTML = `<div><strong>${item.name}</strong> · <span class="mono">${item.mime}</span> · ${window.WrappedUI.formatBytes(bytes.length)}</div>`;
+        head.appendChild(makeDownloadBtn(() => downloadBlob(item.name || "file", blob)));
+        card.appendChild(head);
         if ((item.mime || "").startsWith("image/")) {
           const img = document.createElement("img");
           img.alt = item.name;
           img.src = URL.createObjectURL(blob);
           card.appendChild(img);
         }
-        const btn = document.createElement("button");
-        btn.className = "btn";
-        btn.type = "button";
-        btn.textContent = t("common.download");
-        btn.style.marginTop = "0.6rem";
-        btn.addEventListener("click", () => downloadBlob(item.name || "file", blob));
-        card.appendChild(btn);
       }
       els.items.appendChild(card);
     }
@@ -127,6 +136,7 @@
     }
 
     els.btn.disabled = true;
+    window.WrappedUI.showBusy(t("unwrap.working"));
     try {
       const resp = await fetch(`/api/v1/wraps/${encodeURIComponent(parsed.wrapId)}/unwrap`, {
         method: "POST",
@@ -137,6 +147,27 @@
         }),
       });
       if (resp.status === 403) {
+        const err = await resp.json().catch(() => ({}));
+        const detail = err.detail;
+        if (detail && typeof detail === "object") {
+          if (detail.code === "password_locked") {
+            showError(t("unwrap.passwordLocked"));
+            return;
+          }
+          if (detail.code === "bad_password") {
+            const n = Number(detail.attempts_remaining);
+            const max = Number(detail.attempts_max);
+            if (Number.isFinite(n)) {
+              showError(
+                t("unwrap.badPasswordRemaining", {
+                  n,
+                  max: Number.isFinite(max) ? max : n,
+                })
+              );
+              return;
+            }
+          }
+        }
         showError(t("unwrap.badPassword"));
         return;
       }
@@ -155,6 +186,7 @@
         );
       } catch (err) {
         if (err.message === "bad_password" || err.message === "password_required") {
+          // Should be rare now (server gates first); keep UX clear.
           showError(t("unwrap.badPassword"));
           return;
         }
@@ -168,6 +200,7 @@
     } catch {
       showError(t("common.error"));
     } finally {
+      window.WrappedUI.hideBusy();
       els.btn.disabled = false;
     }
   });
@@ -177,7 +210,6 @@
     settings = await resp.json();
     loadCaptcha();
 
-    // Prefill from path + hash
     const pathMatch = location.pathname.match(/\/w\/([A-Za-z0-9]+)/);
     if (pathMatch && !els.token.value) {
       els.token.value = pathMatch[1];

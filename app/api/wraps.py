@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.models import PasswordMode, Wrap, WrapStatus
+from app.models import Wrap, WrapStatus
 from app.schemas import (
     PublicSettingsOut,
     UnwrapRequest,
@@ -111,12 +111,13 @@ async def create_wrap(
             )
             raise HTTPException(status_code=400, detail="mime_not_allowed")
 
+    # Always store Argon2 hash when a password is set so wrong guesses
+    # are rejected *before* the one-time ciphertext is consumed.
     password_hash = None
     if body.has_password:
-        if settings.password_mode == PasswordMode.server_gate:
-            if not body.password:
-                raise HTTPException(status_code=400, detail="password_required")
-            password_hash = hash_password(body.password)
+        if not body.password:
+            raise HTTPException(status_code=400, detail="password_required")
+        password_hash = hash_password(body.password)
 
     wrap_id = new_wrap_id()
     object_key = f"wraps/{wrap_id}.bin"
@@ -250,21 +251,61 @@ async def unwrap(
         )
         fail("unavailable")
 
-    if (
-        wrap.has_password
-        and wrap.password_mode == PasswordMode.server_gate
-        and wrap.password_hash
-    ):
+    if wrap.has_password and wrap.password_hash:
+        max_attempts = max(1, int(settings.password_max_attempts or 3))
         if not body.password or not verify_password(wrap.password_hash, body.password):
+            wrap.password_fail_count = int(wrap.password_fail_count or 0) + 1
+            remaining = max(0, max_attempts - wrap.password_fail_count)
+            now_fail = datetime.now(timezone.utc)
+
+            if wrap.password_fail_count >= max_attempts:
+                wrap.status = WrapStatus.consumed
+                wrap.consumed_at = now_fail
+                await delete_wrap_object(db, wrap)
+                await db.commit()
+                await write_audit(
+                    db,
+                    event_type="wrap.unwrap",
+                    success=False,
+                    wrap_id=wrap_id,
+                    **meta,
+                    details={
+                        "reason": "password_attempts_exceeded",
+                        "attempts": wrap.password_fail_count,
+                        "attempts_max": max_attempts,
+                    },
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "code": "password_locked",
+                        "attempts_remaining": 0,
+                        "attempts_max": max_attempts,
+                    },
+                )
+
+            await db.commit()
             await write_audit(
                 db,
                 event_type="wrap.unwrap",
                 success=False,
                 wrap_id=wrap_id,
                 **meta,
-                details={"reason": "bad_password"},
+                details={
+                    "reason": "bad_password",
+                    "attempts": wrap.password_fail_count,
+                    "attempts_remaining": remaining,
+                    "attempts_max": max_attempts,
+                },
             )
-            raise HTTPException(status_code=403, detail="bad_password")
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "bad_password",
+                    "attempts_remaining": remaining,
+                    "attempts_max": max_attempts,
+                },
+            )
 
     # Atomic consume
     from sqlalchemy import update

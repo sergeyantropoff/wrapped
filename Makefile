@@ -1,4 +1,4 @@
-.PHONY: help env build up down restart logs shell migrate revision release helm-package helm-lint clean ps
+.PHONY: help env build up down restart logs shell migrate revision release helm-package helm-lint clean ps push
 
 COMPOSE ?= docker compose
 IMAGE_NAME ?= wrapped
@@ -24,6 +24,7 @@ help:
 	@echo "  make migrate      Run alembic upgrade head"
 	@echo "  make revision m=\"msg\"  Create alembic revision"
 	@echo "  make release      Build, tag & push $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)"
+	@echo "  make push         git add ., commit (prompt), push origin"
 	@echo "  make helm-lint    Lint Helm chart"
 	@echo "  make helm-package Package Helm chart"
 	@echo "  make clean        Remove containers, volumes, local image"
@@ -103,3 +104,22 @@ clean:
 	$(COMPOSE) down -v --remove-orphans
 	-docker rmi $(IMAGE_NAME):$(IMAGE_TAG) $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG) 2>/dev/null || true
 	rm -rf dist
+
+# Same flow as proxmox_api_simulator: stage all, multiline commit via Ctrl-D, push origin.
+push:
+	@set -e; \
+	git add .; \
+	echo "=== staged ==="; \
+	git status --short; \
+	echo; \
+	if git diff --cached --quiet; then \
+		echo "Nothing to commit — pushing current branch."; \
+	else \
+		echo "Enter commit message (multiline OK), then Ctrl-D:"; \
+		msg=$$(cat </dev/tty); \
+		if [ -z "$$msg" ]; then echo "Empty commit message, aborting." >&2; exit 1; fi; \
+		printf '%s\n' "$$msg" | git commit -F -; \
+	fi; \
+	echo "Pushing to both remotes:"; \
+	git remote get-url --push --all origin | sed 's/^/  - /'; \
+	git push origin HEAD
