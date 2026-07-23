@@ -85,6 +85,7 @@ buildx-setup:
 
 # Multi-arch release: linux/amd64 + linux/arm64 → Docker Hub manifest list.
 # PUSH=1 (default): buildx --push. PUSH=0: build only (cache; cannot --load multi-arch).
+# Only tag $(FULL_IMAGE) — a bare "$(IMAGE_NAME):tag" would push to docker.io/library/...
 release: env buildx-setup
 	@echo "Building $(FULL_IMAGE) [$(RELEASE_PLATFORMS)]"
 	@if [ "$(PUSH)" = "1" ]; then \
@@ -93,20 +94,18 @@ release: env buildx-setup
 			--provenance=false \
 			--sbom=false \
 			-t $(FULL_IMAGE) \
-			-t $(IMAGE_NAME):$(IMAGE_TAG) \
 			--push \
-			.; \
-		echo "Pushed $(FULL_IMAGE) (multi-arch)"; \
-		docker buildx imagetools inspect $(FULL_IMAGE) | sed -n '1,40p'; \
+			. \
+		&& echo "Pushed $(FULL_IMAGE) (multi-arch)" \
+		&& docker buildx imagetools inspect $(FULL_IMAGE) | sed -n '1,40p'; \
 	else \
 		docker buildx build \
 			--platform $(RELEASE_PLATFORMS) \
 			--provenance=false \
 			--sbom=false \
 			-t $(FULL_IMAGE) \
-			-t $(IMAGE_NAME):$(IMAGE_TAG) \
-			.; \
-		echo "PUSH=0 — multi-arch built into buildx cache (not pushed, not loaded locally)"; \
+			. \
+		&& echo "PUSH=0 — multi-arch built into buildx cache (not pushed, not loaded locally)"; \
 	fi
 	@$(MAKE) helm-package IMAGE_TAG=$(IMAGE_TAG)
 

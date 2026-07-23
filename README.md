@@ -14,9 +14,22 @@
 - RU / EN, светлая и тёмная тема
 - CAPTCHA: Cloudflare Turnstile и/или hCaptcha
 - админка: **статистика**, настройки, audit (пагинация + очистка), danger purge
-- Docker Compose и Helm; образ на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped)
+- Docker Compose и Helm; multi-arch образ (`amd64`/`arm64`) на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped)
 
 Ссылка для получателя: `/w/<id>#<key>` или токен `wrapped_v1.<id>.<key>`. Ключ шифрования в URL-фрагменте (`#...`) на сервер не уходит.
+
+## Что нового
+
+Кратко по недавним доработкам UI, админки и релиза:
+
+| Область | Что появилось |
+|---------|----------------|
+| **Расшифровка** | Прокрутка превью текста по вертикали и горизонтали; кнопка **Копировать** рядом со скачиванием |
+| **Пароль** | Argon2-проверка *до* выдачи ciphertext; лимит попыток; пустой пароль попытку не тратит; структурированные ошибки в UI |
+| **Админка** | Стартовая **Статистика** (MinIO, wraps, audit); очистка audit с подтверждением; пагинация журнала |
+| **Релиз** | `make release` собирает **multi-arch** манифест `linux/amd64` + `linux/arm64` через Buildx и пушит только `inecs/wrapped:<tag>` |
+
+Подробности — в разделах ниже (безопасность, админка, сборка образа).
 
 ## Скриншоты
 
@@ -384,6 +397,7 @@ JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), тег OpenAPI
 ### Docker Hub (`make release`)
 
 Сборка **multi-arch** (`linux/amd64` + `linux/arm64`) через Docker Buildx и push манифеста на Docker Hub.
+Пушится только полный тег `$(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)` (по умолчанию `inecs/wrapped:…`) — короткий тег вроде `wrapped:0.1.0` при `--push` ушёл бы в `docker.io/library/…` и получил бы отказ в авторизации.
 
 ```bash
 docker login   # пользователь inecs
@@ -394,6 +408,7 @@ make release RELEASE_PLATFORMS=linux/arm64  # одна платформа
 ```
 
 Нужны Docker Buildx и (для cross-build) QEMU/эмуляция — на Docker Desktop обычно уже есть.
+Первый запуск создаёт builder `wrapped-release` (`make buildx-setup` внутри `release`).
 
 Эквивалент:
 
@@ -405,6 +420,7 @@ docker buildx build \
   --push .
 ```
 
+После успешного push Makefile печатает краткий `imagetools inspect` (платформы в манифесте).
 Образ при старте: `alembic upgrade head` + uvicorn `:8000`. Healthcheck: `GET /health`.
 
 ### Git (`make push`)
@@ -467,7 +483,8 @@ external:
 | `make logs` / `make ps` / `make restart` | Логи, статус, рестарт app |
 | `make migrate` | `alembic upgrade head` |
 | `make revision m="msg"` | Новая alembic-ревизия |
-| `make release` | Multi-arch образ (amd64+arm64) на Docker Hub (+ Helm package) |
+| `make release` | Multi-arch образ (amd64+arm64) → Docker Hub (`inecs/wrapped`) + Helm package |
+| `make buildx-setup` | Создать/выбрать Buildx builder `wrapped-release` (вызывается из `release`) |
 | `make push` | git add → многострочный commit (Ctrl-D) → push |
 | `make helm-lint` / `make helm-package` | Helm |
 
@@ -479,6 +496,7 @@ external:
 - PostgreSQL 16+
 - S3-совместимое хранилище (MinIO и т.п.)
 - Docker Compose v2
+- для `make release`: Docker Buildx (+ QEMU для cross-build arm64 на amd64 и наоборот)
 
 ---
 
