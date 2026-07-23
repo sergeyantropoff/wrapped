@@ -17,3 +17,4 @@ helm/wrapped/charts/
 *.tgz
 .coverage
 htmlcov/
+.cursor/
