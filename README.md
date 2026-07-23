@@ -383,18 +383,26 @@ JSON Admin API: HTTP Basic (`ADMIN_USERNAME` / `ADMIN_PASSWORD`), тег OpenAPI
 
 ### Docker Hub (`make release`)
 
+Сборка **multi-arch** (`linux/amd64` + `linux/arm64`) через Docker Buildx и push манифеста на Docker Hub.
+
 ```bash
 docker login   # пользователь inecs
 
-make release IMAGE_TAG=0.1.0              # build + push inecs/wrapped:0.1.0
-make release IMAGE_TAG=0.1.0 PUSH=0       # только локальный тег
+make release IMAGE_TAG=0.1.0              # buildx amd64+arm64 + push inecs/wrapped:0.1.0
+make release IMAGE_TAG=0.1.0 PUSH=0       # только сборка в buildx cache (без push)
+make release RELEASE_PLATFORMS=linux/arm64  # одна платформа
 ```
+
+Нужны Docker Buildx и (для cross-build) QEMU/эмуляция — на Docker Desktop обычно уже есть.
 
 Эквивалент:
 
 ```bash
-docker build -t inecs/wrapped:0.1.0 .
-docker push inecs/wrapped:0.1.0
+docker buildx create --name wrapped-release --driver docker-container --use  # один раз
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t inecs/wrapped:0.1.0 \
+  --push .
 ```
 
 Образ при старте: `alembic upgrade head` + uvicorn `:8000`. Healthcheck: `GET /health`.
@@ -459,7 +467,7 @@ external:
 | `make logs` / `make ps` / `make restart` | Логи, статус, рестарт app |
 | `make migrate` | `alembic upgrade head` |
 | `make revision m="msg"` | Новая alembic-ревизия |
-| `make release` | Образ на Docker Hub (+ Helm package) |
+| `make release` | Multi-arch образ (amd64+arm64) на Docker Hub (+ Helm package) |
 | `make push` | git add → многострочный commit (Ctrl-D) → push |
 | `make helm-lint` / `make helm-package` | Helm |
 

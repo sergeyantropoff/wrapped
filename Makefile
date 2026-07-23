@@ -1,4 +1,4 @@
-.PHONY: help env build up down restart logs shell migrate revision release helm-package helm-lint clean ps push
+.PHONY: help env build up down restart logs shell migrate revision release buildx-setup helm-package helm-lint clean ps push
 
 COMPOSE ?= docker compose
 IMAGE_NAME ?= wrapped
@@ -6,7 +6,11 @@ IMAGE_TAG ?= 0.1.0
 # Docker Hub namespace → image: $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 # Example: inecs/wrapped:0.1.0
 RELEASE_REGISTRY ?= inecs
-# Set PUSH=0 to build/tag only (no docker push)
+FULL_IMAGE := $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
+# Multi-arch platforms for make release (Docker Hub manifest list)
+RELEASE_PLATFORMS ?= linux/amd64,linux/arm64
+BUILDX_BUILDER ?= wrapped-release
+# Set PUSH=0 to build only (no docker push; image stays in buildx cache)
 PUSH ?= 1
 APP_PORT ?= 8000
 
@@ -23,7 +27,8 @@ help:
 	@echo "  make shell        Shell into app container"
 	@echo "  make migrate      Run alembic upgrade head"
 	@echo "  make revision m=\"msg\"  Create alembic revision"
-	@echo "  make release      Build, tag & push $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)"
+	@echo "  make release      Multi-arch build & push $(FULL_IMAGE)"
+	@echo "                    platforms: $(RELEASE_PLATFORMS)"
 	@echo "  make push         git add ., commit (prompt), push origin"
 	@echo "  make helm-lint    Lint Helm chart"
 	@echo "  make helm-package Package Helm chart"
@@ -32,6 +37,7 @@ help:
 	@echo "Release examples:"
 	@echo "  make release IMAGE_TAG=0.1.0"
 	@echo "  make release IMAGE_TAG=0.1.0 PUSH=0"
+	@echo "  make release IMAGE_TAG=0.1.0 RELEASE_PLATFORMS=linux/arm64"
 
 env:
 	@test -f .env || cp .env.example .env
@@ -69,18 +75,38 @@ revision:
 	@test -n "$(m)" || (echo 'Usage: make revision m="message"' && exit 1)
 	$(COMPOSE) exec app alembic revision --autogenerate -m "$(m)"
 
-# Release: build image, tag as $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG), push to Docker Hub.
-# External Postgres/MinIO: set DATABASE_URL and S3_* in runtime env / Helm values.
-release: env
-	@echo "Building $(IMAGE_NAME):$(IMAGE_TAG)"
-	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
-	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
-	@echo "Tagged $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)"
+buildx-setup:
+	@command -v docker >/dev/null 2>&1 || (echo "docker is required" >&2; exit 1)
+	@docker buildx version >/dev/null 2>&1 || (echo "docker buildx is required" >&2; exit 1)
+	@docker buildx inspect $(BUILDX_BUILDER) >/dev/null 2>&1 || \
+		docker buildx create --name $(BUILDX_BUILDER) --driver docker-container --use
+	@docker buildx use $(BUILDX_BUILDER)
+	@docker buildx inspect --bootstrap >/dev/null
+
+# Multi-arch release: linux/amd64 + linux/arm64 → Docker Hub manifest list.
+# PUSH=1 (default): buildx --push. PUSH=0: build only (cache; cannot --load multi-arch).
+release: env buildx-setup
+	@echo "Building $(FULL_IMAGE) [$(RELEASE_PLATFORMS)]"
 	@if [ "$(PUSH)" = "1" ]; then \
-		echo "Pushing $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)"; \
-		docker push $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG); \
+		docker buildx build \
+			--platform $(RELEASE_PLATFORMS) \
+			--provenance=false \
+			--sbom=false \
+			-t $(FULL_IMAGE) \
+			-t $(IMAGE_NAME):$(IMAGE_TAG) \
+			--push \
+			.; \
+		echo "Pushed $(FULL_IMAGE) (multi-arch)"; \
+		docker buildx imagetools inspect $(FULL_IMAGE) | sed -n '1,40p'; \
 	else \
-		echo "PUSH=0 — skipped docker push"; \
+		docker buildx build \
+			--platform $(RELEASE_PLATFORMS) \
+			--provenance=false \
+			--sbom=false \
+			-t $(FULL_IMAGE) \
+			-t $(IMAGE_NAME):$(IMAGE_TAG) \
+			.; \
+		echo "PUSH=0 — multi-arch built into buildx cache (not pushed, not loaded locally)"; \
 	fi
 	@$(MAKE) helm-package IMAGE_TAG=$(IMAGE_TAG)
 
@@ -102,7 +128,8 @@ helm-package:
 
 clean:
 	$(COMPOSE) down -v --remove-orphans
-	-docker rmi $(IMAGE_NAME):$(IMAGE_TAG) $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG) 2>/dev/null || true
+	-docker rmi $(IMAGE_NAME):$(IMAGE_TAG) $(FULL_IMAGE) 2>/dev/null || true
+	-docker buildx rm $(BUILDX_BUILDER) 2>/dev/null || true
 	rm -rf dist
 
 # Same flow as proxmox_api_simulator: stage all, multiline commit via Ctrl-D, push origin.
