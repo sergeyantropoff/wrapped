@@ -120,6 +120,27 @@
     return btn;
   }
 
+  function makeCopyBtn(getText) {
+    const btn = document.createElement("button");
+    btn.className = "btn copy-btn";
+    btn.type = "button";
+    const label = () =>
+      `<i class="fa-solid fa-copy" aria-hidden="true"></i><span>${t("common.copy")}</span>`;
+    btn.innerHTML = label();
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(getText() || "");
+        btn.innerHTML = `<i class="fa-solid fa-check" aria-hidden="true"></i><span>${t("common.copied")}</span>`;
+        setTimeout(() => {
+          btn.innerHTML = label();
+        }, 1200);
+      } catch {
+        /* ignore */
+      }
+    });
+    return btn;
+  }
+
   function renderPackage(pack) {
     els.items.innerHTML = "";
     for (const item of pack.items || []) {
@@ -127,23 +148,26 @@
       card.className = "item-card";
       if (item.type === "text") {
         const lang = item.language || "plaintext";
+        const text = item.content || "";
         const head = document.createElement("div");
         head.className = "item-card-head";
         head.innerHTML = `<div><strong>text</strong> · <span class="mono">${lang}</span></div>`;
-        head.appendChild(
+        const actions = document.createElement("div");
+        actions.className = "item-card-actions";
+        actions.appendChild(makeCopyBtn(() => text));
+        actions.appendChild(
           makeDownloadBtn(() => {
-            downloadBlob(
-              `wrapped-${lang}.txt`,
-              new Blob([item.content || ""], { type: "text/plain" })
-            );
+            downloadBlob(`wrapped-${lang}.txt`, new Blob([text], { type: "text/plain" }));
           })
         );
+        head.appendChild(actions);
         card.appendChild(head);
         const pre = document.createElement("pre");
+        pre.className = "item-text-pre";
         const code = document.createElement("code");
         pre.appendChild(code);
         card.appendChild(pre);
-        window.WrappedHighlight.highlightElement(code, item.content || "", lang);
+        window.WrappedHighlight.highlightElement(code, text, lang);
       } else if (item.type === "file") {
         const bytes = window.WrappedCrypto.base64ToBytes(item.data_b64);
         const blob = new Blob([bytes], { type: item.mime || "application/octet-stream" });
