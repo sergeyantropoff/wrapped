@@ -476,7 +476,9 @@ kubectl -n wrapped rollout status deployment/wrapped
 
 Credential: `k3s-kubeconfig` (Secret file) — тот же, что у devops.org.ru.
 
-Рекомендуемая связка job’ов: после успешного **Wrapped Builder** (build) → триггер **Wrapped Deploy** (этот `Jenkinsfile.deploy`), либо ручной **Build with Parameters**.
+Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после успешного **Build & push** стадия **Trigger deploy** вызывает Multibranch job `Devops Tools/Wrapped Deploy/main` с параметрами `inecs/wrapped` / `0.1.0` / `Always` (`wait: true`). Если имя folder/job другое — поменяй `DEPLOY_JOB` в `Jenkinsfile`.
+
+Ручной запуск Deploy по-прежнему: **Build with Parameters**.
 
 ### Git (`make push`)
 

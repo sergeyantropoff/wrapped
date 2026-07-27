@@ -4,7 +4,9 @@
 // (секреты, Ingress, Postgres, MinIO). Этот pipeline лишь обновляет image.*
 // через helm --reuse-values, не затирая values с кластера.
 //
-// Job: отдельный Pipeline / Multibranch, Script Path = Jenkinsfile.deploy
+// Job: отдельный Multibranch Pipeline, Script Path = Jenkinsfile.deploy
+// Имя по умолчанию (см. DEPLOY_JOB в Jenkinsfile): «Devops Tools/Wrapped Deploy»
+// Триггер: вручную (Build with Parameters) или автоматически из Jenkinsfile после Build & push
 // Credentials:
 //   k3s-kubeconfig — Secret file (kubeconfig), как у devops.org.ru
 //

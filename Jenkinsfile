@@ -1,6 +1,7 @@
 // Wrapped — CI: multi-arch (amd64+arm64) build & push to Harbor + Docker Hub
 //
 // Триггер: push в main (webhook Gitea → Jenkins Multibranch / Pipeline from SCM).
+// После успешного Build & push → trigger job DEPLOY_JOB (Jenkinsfile.deploy).
 //
 // Credentials в Jenkins (Manage Credentials → System → Global):
 //   harbor-devops-tools-push-pull-access — Username with password (Harbor devops-tools)
@@ -11,6 +12,10 @@
 // Образы:
 //   hub.antropoff.ru/devops-tools/wrapped:<sha|0.1.0|latest>
 //   inecs/wrapped:<sha|0.1.0|latest>
+//
+// Связка Build → Deploy:
+//   Multibranch Deploy job, Script Path = Jenkinsfile.deploy
+//   путь по умолчанию: «Devops Tools/Wrapped Deploy/main» (поменяй DEPLOY_JOB при другом имени)
 
 pipeline {
     agent { label 'docker' }
@@ -29,6 +34,8 @@ pipeline {
         IMAGE_VERSION     = '0.1.0'
         RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
+        // Multibranch: Folder/Job/branch — как в UI «Devops Tools » Wrapped Deploy » main»
+        DEPLOY_JOB        = 'Devops Tools/Wrapped Deploy/main'
         TZ                = 'Europe/Moscow'
     }
 
@@ -106,15 +113,40 @@ pipeline {
                 }
             }
         }
+
+        stage('Trigger deploy') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    echo "Triggering ${DEPLOY_JOB} → ${DOCKERHUB_IMAGE}:${IMAGE_VERSION}"
+                    build(
+                        job: env.DEPLOY_JOB,
+                        wait: true,
+                        propagate: true,
+                        parameters: [
+                            string(name: 'IMAGE_REPOSITORY', value: env.DOCKERHUB_IMAGE),
+                            string(name: 'IMAGE_TAG', value: env.IMAGE_VERSION),
+                            string(name: 'IMAGE_PULL_POLICY', value: 'Always'),
+                        ]
+                    )
+                }
+            }
+        }
     }
 
     post {
         success {
             echo "✓ Harbor:    ${HARBOR_IMAGE}:{${RELEASE_TAG},${IMAGE_VERSION},latest}"
             echo "✓ Docker Hub: ${DOCKERHUB_IMAGE}:{${RELEASE_TAG},${IMAGE_VERSION},latest}"
+            echo "✓ Deploy:    ${DEPLOY_JOB} (${DOCKERHUB_IMAGE}:${IMAGE_VERSION})"
         }
         failure {
-            echo "✗ Сборка или push не удались — см. лог стадии Build & push"
+            echo "✗ Сборка, push или trigger deploy не удались — см. лог стадий"
         }
         always {
             script {
