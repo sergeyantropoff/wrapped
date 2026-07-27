@@ -29,7 +29,7 @@ pipeline {
         HARBOR_REGISTRY   = 'hub.antropoff.ru'
         HARBOR_IMAGE      = 'hub.antropoff.ru/devops-tools/wrapped'
         DOCKERHUB_IMAGE   = 'inecs/wrapped'
-        RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
+        // RELEASE_TAG — после checkout (с agent none GIT_COMMIT ещё нет → валидация env падает)
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
         DEPLOY_JOB        = 'devops-tools/wrapped/wrapped-deploy/main'
         TZ                = 'Europe/Moscow'
@@ -62,7 +62,15 @@ pipeline {
                                 if (!env.IMAGE_VERSION) {
                                     error('VERSION file is empty')
                                 }
+                                env.RELEASE_TAG = sh(
+                                    script: 'git rev-parse --short=7 HEAD',
+                                    returnStdout: true
+                                ).trim()
+                                if (!env.RELEASE_TAG) {
+                                    error('could not resolve short git SHA for RELEASE_TAG')
+                                }
                                 echo "IMAGE_VERSION from VERSION → ${env.IMAGE_VERSION}"
+                                echo "RELEASE_TAG → ${env.RELEASE_TAG}"
                             }
                         }
                     }
