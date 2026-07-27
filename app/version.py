@@ -26,8 +26,8 @@ def _read_version_file(path: Path) -> str | None:
 @lru_cache
 def get_app_version() -> str:
     for path in (
-        _VERSION_FILE,
         Path("/app/VERSION"),
+        _VERSION_FILE,
         Path.cwd() / "VERSION",
     ):
         found = _read_version_file(path)
@@ -45,6 +45,7 @@ def get_app_version() -> str:
 
 
 def get_app_version_label() -> str:
+    clear_version_cache()
     return f"v{get_app_version()}"
 
 

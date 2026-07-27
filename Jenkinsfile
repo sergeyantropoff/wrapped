@@ -1,15 +1,16 @@
-// Wrapped — CI: auto SemVer bump + multi-arch push (Harbor + Docker Hub) + deploy
+// Wrapped — CI: multi-arch push (Harbor + Docker Hub) + Helm deploy
 //
 // Триггер: push в main (webhook Gitea → Jenkins Multibranch).
-// Коммиты с [skip ci] в сообщении — без повторного bump (анти-цикл после version commit).
+// Версия образа = файл VERSION из коммита (без авто-bump в CI).
+// Bump: make bump-patch / make push локально — что запушили, то и уйдёт в релиз.
 //
 // Credentials (Manage Jenkins → Credentials → Global):
 //   harbor-devops-tools-push-pull-access — Harbor devops-tools (robot)
 //   docker-hub                          — Docker Hub (inecs)
-//   ssh-gitea-key                       — SSH к Gitea (push bump VERSION)
-//   gitea-jenkins-token                 — token Gitea (если нужен API; SCM обычно ssh-gitea-key)
+//   ssh-gitea-key                       — SCM checkout Gitea
+//   k3s-kubeconfig                      — в job Deploy (Jenkinsfile.deploy)
 //
-// Версия: файл VERSION (+ pyproject / Helm). Теги образа: :<semver>, :<sha>, :latest
+// Теги образа: :<semver из VERSION>, :<sha>, :latest
 // Deploy: devops-tools/wrapped/wrapped-deploy/main
 
 pipeline {
@@ -29,8 +30,6 @@ pipeline {
         RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
         DEPLOY_JOB        = 'devops-tools/wrapped/wrapped-deploy/main'
-        // SSH «Доступ к Gitea по SSH» — push bump-коммита VERSION
-        GIT_SSH_CREDENTIALS_ID = 'ssh-gitea-key'
         TZ                = 'Europe/Moscow'
     }
 
@@ -51,20 +50,14 @@ pipeline {
             steps {
                 container('docker') {
                     script {
-                        sh 'apk add --no-cache python3 git openssh-client >/dev/null'
-                        def lastMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
-                        if (lastMsg.contains('[skip ci]')) {
-                            env.IMAGE_VERSION = sh(script: 'cat VERSION', returnStdout: true).trim()
-                            env.SKIP_CI = '1'
-                            echo "Skip CI for version-bump commit ([skip ci]); VERSION=${env.IMAGE_VERSION}"
-                        } else {
-                            env.IMAGE_VERSION = sh(
-                                script: 'PYTHONPATH=. python3 scripts/bump_version.py patch',
-                                returnStdout: true
-                            ).trim()
-                            env.SKIP_CI = '0'
-                            echo "Bumped VERSION → ${env.IMAGE_VERSION}"
+                        env.IMAGE_VERSION = sh(
+                            script: "tr -d '[:space:]' < VERSION",
+                            returnStdout: true
+                        ).trim()
+                        if (!env.IMAGE_VERSION) {
+                            error('VERSION file is empty')
                         }
+                        echo "IMAGE_VERSION from VERSION → ${env.IMAGE_VERSION}"
                     }
                 }
             }
@@ -72,9 +65,9 @@ pipeline {
 
         stage('Build & push') {
             when {
-                allOf {
-                    anyOf { branch 'main'; branch 'master' }
-                    expression { return env.SKIP_CI != '1' }
+                anyOf {
+                    branch 'main'
+                    branch 'master'
                 }
             }
             steps {
@@ -139,40 +132,11 @@ pipeline {
             }
         }
 
-        stage('Commit version') {
-            when {
-                allOf {
-                    anyOf { branch 'main'; branch 'master' }
-                    expression { return env.SKIP_CI != '1' }
-                }
-            }
-            steps {
-                container('docker') {
-                    sshagent(credentials: [env.GIT_SSH_CREDENTIALS_ID]) {
-                        sh '''
-                            set -eux
-                            git config user.email "jenkins@antropoff.ru"
-                            git config user.name "Jenkins"
-                            git add VERSION pyproject.toml helm/wrapped/Chart.yaml helm/wrapped/values.yaml
-                            if git diff --cached --quiet; then
-                              echo "No version files to commit"
-                              exit 0
-                            fi
-                            git commit -m "Bump version to ${IMAGE_VERSION} [skip ci]."
-                            # Multibranch detached HEAD → push to branch name
-                            BRANCH="${BRANCH_NAME:-main}"
-                            git push origin "HEAD:refs/heads/${BRANCH}"
-                        '''
-                    }
-                }
-            }
-        }
-
         stage('Trigger deploy') {
             when {
-                allOf {
-                    anyOf { branch 'main'; branch 'master' }
-                    expression { return env.SKIP_CI != '1' }
+                anyOf {
+                    branch 'main'
+                    branch 'master'
                 }
             }
             steps {

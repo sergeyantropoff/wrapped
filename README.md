@@ -432,7 +432,7 @@ docker buildx build \
 | Harbor | `hub.antropoff.ru/devops-tools/wrapped` |
 | Docker Hub | `inecs/wrapped` |
 
-Теги на каждый реестр: `:<semver>` (из `VERSION`, авто +0.0.1 на каждый CI build), `:<short-sha>`, `:latest`.
+Теги на каждый реестр: `:<semver>` (ровно из `VERSION` в коммите), `:<short-sha>`, `:latest`.
 
 ### Версионирование
 
@@ -440,18 +440,18 @@ docker buildx build \
 
 | Где | Поведение |
 |-----|-----------|
-| UI | справа в футере: `vX.Y.Z` |
+| UI (модалка «?») | бейдж `vX.Y.Z` |
 | `make bump-patch` / `bump-minor` | ручной bump |
 | `make push` | автоматически `bump-patch`, затем commit/push |
-| Jenkins (`Jenkinsfile`) | на `main` автоматически `bump-patch`, образ с новым тегом, commit `Bump version to X.Y.Z [skip ci].`, затем Deploy |
+| Jenkins (`Jenkinsfile`) | читает `VERSION` из коммита **без** доп. bump → те же теги в образе и на кластере |
 
-Коммиты с `[skip ci]` не бампят версию снова (анти-цикл). Push bump VERSION — credential `ssh-gitea-key` (Доступ к Gitea по SSH).
+Что в `VERSION` запушили — то и уйдёт в Harbor/Hub/деплой (и в футер модалки внутри образа).
 
 Credentials (Global, как в job’ах):
 
 | ID | Тип | Назначение |
 |----|-----|------------|
-| `ssh-gitea-key` | SSH Username with private key | SCM + push bump VERSION |
+| `ssh-gitea-key` | SSH Username with private key | SCM checkout |
 | `gitea-jenkins-token` | Secret text / token | API Gitea (webhook/API при необходимости) |
 | `harbor-devops-tools-push-pull-access` | Username/password | Harbor `devops-tools` (robot) |
 | `docker-hub` | Username/password | Docker Hub `inecs` |
@@ -492,7 +492,7 @@ kubectl -n wrapped rollout status deployment/wrapped
 
 Credential: `k3s-kubeconfig` (Secret file) — kubeconfig к K3S.
 
-Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с актуальным SemVer (`wait: true`). Push VERSION: `ssh-gitea-key`.
+Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** (чтение `VERSION`) + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с тем же SemVer (`wait: true`).
 
 Ручной запуск Deploy: **Build with Parameters** (пустой `IMAGE_TAG` → `cat VERSION`).
 

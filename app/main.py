@@ -99,14 +99,19 @@ def create_app() -> FastAPI:
     app.include_router(admin.api_router)
 
     templates = Jinja2Templates(directory="app/templates")
-    templates.env.globals["app_version"] = app_version
-    templates.env.globals["app_version_label"] = get_app_version_label()
-    admin.templates.env.globals["app_version"] = app_version
-    admin.templates.env.globals["app_version_label"] = get_app_version_label()
+    # Callables so Jinja re-reads VERSION (dev mount / after bump) on each render
+    templates.env.globals["app_version"] = get_app_version
+    templates.env.globals["app_version_label"] = get_app_version_label
+    admin.templates.env.globals["app_version"] = get_app_version
+    admin.templates.env.globals["app_version_label"] = get_app_version_label
 
     @app.get("/health", tags=["System"], summary="Health check", include_in_schema=docs_on)
     async def health():
-        return {"status": "ok", "service": settings.app_name, "version": app_version}
+        return {
+            "status": "ok",
+            "service": settings.app_name,
+            "version": get_app_version(),
+        }
 
     @app.get("/", include_in_schema=False)
     async def index(request: Request):
