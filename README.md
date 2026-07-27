@@ -14,7 +14,7 @@
 - RU / EN, светлая и тёмная тема
 - CAPTCHA: Cloudflare Turnstile и/или hCaptcha
 - админка: **статистика**, настройки, audit (пагинация + очистка), danger purge
-- Docker Compose и Helm; multi-arch образ (`amd64`/`arm64`) на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped)
+- Docker Compose и Helm; multi-arch образ (`amd64`/`arm64`) на Docker Hub: [`inecs/wrapped`](https://hub.docker.com/r/inecs/wrapped) и Harbor `hub.antropoff.ru/devops-tools/wrapped` (Jenkins CI)
 
 Ссылка для получателя: `/w/<id>#<key>` или токен `wrapped_v1.<id>.<key>`. Ключ шифрования в URL-фрагменте (`#...`) на сервер не уходит.
 
@@ -27,7 +27,7 @@
 | **Расшифровка** | Прокрутка превью текста по вертикали и горизонтали; кнопка **Копировать** рядом со скачиванием |
 | **Пароль** | Argon2-проверка *до* выдачи ciphertext; лимит попыток; пустой пароль попытку не тратит; структурированные ошибки в UI |
 | **Админка** | Стартовая **Статистика** (MinIO, wraps, audit); очистка audit с подтверждением; пагинация журнала |
-| **Релиз** | `make release` собирает **multi-arch** манифест `linux/amd64` + `linux/arm64` через Buildx и пушит только `inecs/wrapped:<tag>` |
+| **Релиз** | `make release` / Jenkins CI: **multi-arch** `linux/amd64` + `linux/arm64` → Harbor `devops-tools/wrapped` и Docker Hub `inecs/wrapped` (`:sha`, `:0.1.0`, `:latest`) |
 
 Подробности — в разделах ниже (безопасность, админка, сборка образа).
 
@@ -422,6 +422,26 @@ docker buildx build \
 
 После успешного push Makefile печатает краткий `imagetools inspect` (платформы в манифесте).
 Образ при старте: `alembic upgrade head` + uvicorn `:8000`. Healthcheck: `GET /health`.
+
+### Jenkins CI (Harbor + Docker Hub)
+
+После push в ветку **`main`** Jenkins собирает multi-arch образ (`linux/amd64` + `linux/arm64`) и пушит в оба реестра:
+
+| Реестр | Образ |
+|--------|--------|
+| Harbor | `hub.antropoff.ru/devops-tools/wrapped` |
+| Docker Hub | `inecs/wrapped` |
+
+Теги на каждый реестр: `:<short-sha>`, `:0.1.0`, `:latest` (плюс служебные `:<sha>-amd64` / `:<sha>-arm64` для сборки манифеста).
+
+Credentials в Jenkins:
+
+| ID | Тип | Назначение |
+|----|-----|------------|
+| `harbor-antropoff` | Username/password | robot для `hub.antropoff.ru` |
+| `dockerhub-inecs` | Username/password | Docker Hub `inecs` + access token |
+
+Job: Multibranch Pipeline или Pipeline from SCM на этот репозиторий + webhook на push. Pipeline описан в корневом [`Jenkinsfile`](Jenkinsfile).
 
 ### Git (`make push`)
 
