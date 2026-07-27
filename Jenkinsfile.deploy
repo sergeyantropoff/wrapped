@@ -34,8 +34,8 @@ pipeline {
         )
         string(
             name: 'IMAGE_TAG',
-            defaultValue: '0.1.0',
-            description: 'Тег образа (0.1.0 / latest / short-sha после CI build)'
+            defaultValue: '',
+            description: 'Тег образа (SemVer из CI). Пусто = cat VERSION из репозитория'
         )
         choice(
             name: 'IMAGE_PULL_POLICY',
@@ -112,9 +112,15 @@ pipeline {
                               exit 1
                             fi
 
+                            # IMAGE_TAG пустой → из VERSION (автоверсионирование)
+                            if [ -z "${IMAGE_TAG}" ]; then
+                              IMAGE_TAG="$(tr -d '[:space:]' < VERSION)"
+                              export IMAGE_TAG
+                            fi
+                            test -n "${IMAGE_TAG}"
                             echo "Upgrading ${HELM_RELEASE}: ${IMAGE_REPOSITORY}:${IMAGE_TAG} (${IMAGE_PULL_POLICY})"
 
-                            # Как addon: helm upgrade --install … --atomic --wait
+                            # Как addon: helm upgrade … --atomic --wait
                             # --reuse-values сохраняет Ingress/секреты/DB/S3 с кластера
                             helm upgrade "$HELM_RELEASE" "$HELM_CHART" \
                               --namespace "$HELM_NAMESPACE" \

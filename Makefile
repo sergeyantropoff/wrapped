@@ -1,8 +1,9 @@
-.PHONY: help env build up down restart logs shell migrate revision release buildx-setup helm-package helm-lint clean ps push
+.PHONY: help env build up down restart logs shell migrate revision release buildx-setup helm-package helm-lint clean ps push bump-patch bump-minor version-commit
 
 COMPOSE ?= docker compose
 IMAGE_NAME ?= wrapped
-IMAGE_TAG ?= 0.1.0
+# SemVer from VERSION (source of truth); override: make release IMAGE_TAG=1.2.3
+IMAGE_TAG ?= $(shell cat VERSION 2>/dev/null || echo 0.1.0)
 # Docker Hub namespace → image: $(RELEASE_REGISTRY)/$(IMAGE_NAME):$(IMAGE_TAG)
 # Example: inecs/wrapped:0.1.0
 RELEASE_REGISTRY ?= inecs
@@ -27,17 +28,21 @@ help:
 	@echo "  make shell        Shell into app container"
 	@echo "  make migrate      Run alembic upgrade head"
 	@echo "  make revision m=\"msg\"  Create alembic revision"
+	@echo "  make bump-patch   VERSION +0.0.1 (pyproject + Helm)"
+	@echo "  make bump-minor   VERSION +0.1.0"
 	@echo "  make release      Multi-arch build & push $(FULL_IMAGE)"
 	@echo "                    platforms: $(RELEASE_PLATFORMS)"
-	@echo "  make push         git add ., commit (prompt), push origin"
+	@echo "  make push         bump-patch + git add/commit (prompt) + push"
 	@echo "  make helm-lint    Lint Helm chart"
 	@echo "  make helm-package Package Helm chart"
 	@echo "  make clean        Remove containers, volumes, local image"
 	@echo ""
+	@echo "Version: $$(cat VERSION 2>/dev/null || echo 0.1.0)"
 	@echo "Release examples:"
-	@echo "  make release IMAGE_TAG=0.1.0"
-	@echo "  make release IMAGE_TAG=0.1.0 PUSH=0"
-	@echo "  make release IMAGE_TAG=0.1.0 RELEASE_PLATFORMS=linux/arm64"
+	@echo "  make release                    # tag from VERSION"
+	@echo "  make release IMAGE_TAG=1.2.3"
+	@echo "  make release PUSH=0"
+	@echo "  make release RELEASE_PLATFORMS=linux/arm64"
 
 env:
 	@test -f .env || cp .env.example .env
@@ -131,8 +136,24 @@ clean:
 	-docker buildx rm $(BUILDX_BUILDER) 2>/dev/null || true
 	rm -rf dist
 
-# Same flow as proxmox_api_simulator: stage all, multiline commit via Ctrl-D, push origin.
-push:
+# Same flow as proxmox_api_simulator / infra: bump SemVer, stage, multiline commit, push.
+bump-patch:
+	@PYTHONPATH=. python3 scripts/bump_version.py patch
+	@echo "VERSION → $$(cat VERSION)"
+
+bump-minor:
+	@PYTHONPATH=. python3 scripts/bump_version.py minor
+	@echo "VERSION → $$(cat VERSION)"
+
+version-commit:
+	@git add VERSION pyproject.toml helm/wrapped/Chart.yaml helm/wrapped/values.yaml
+	@if git diff --cached --quiet; then \
+		echo "Version unchanged — no version commit"; \
+	else \
+		git commit -m "Bump version to $$(cat VERSION)."; \
+	fi
+
+push: bump-patch
 	@set -e; \
 	git add .; \
 	echo "=== staged ==="; \

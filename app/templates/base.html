@@ -66,8 +66,11 @@
       </li>
     </ul>
     <p class="footer-copy">
-      © <span data-i18n="footer.copy.author">Сергей Антропов</span>
-      · <a href="https://devops.org.ru" target="_blank" rel="noopener noreferrer">devops.org.ru</a>
+      <span class="footer-copy-left">
+        © <span data-i18n="footer.copy.author">Сергей Антропов</span>
+        · <a href="https://devops.org.ru" target="_blank" rel="noopener noreferrer">devops.org.ru</a>
+      </span>
+      <span class="footer-copy-version" title="Version">{{ app_version_label | default('v0.1.0') }}</span>
     </p>
   </footer>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

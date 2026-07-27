@@ -10,7 +10,7 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md VERSION ./
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./

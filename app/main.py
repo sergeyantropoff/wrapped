@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.services.settings_service import get_or_create_settings
 from app.services.storage import storage
+from app.version import get_app_version, get_app_version_label
 
 OPENAPI_TAGS = [
     {
@@ -73,9 +74,10 @@ def custom_openapi(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     docs_on = settings.is_docs_enabled
+    app_version = get_app_version()
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=app_version,
         description=(
             "Wrapped — zero-knowledge one-time encrypted drop.\n\n"
             "Public wrap APIs are anonymous. Admin APIs require HTTP Basic."
@@ -97,10 +99,14 @@ def create_app() -> FastAPI:
     app.include_router(admin.api_router)
 
     templates = Jinja2Templates(directory="app/templates")
+    templates.env.globals["app_version"] = app_version
+    templates.env.globals["app_version_label"] = get_app_version_label()
+    admin.templates.env.globals["app_version"] = app_version
+    admin.templates.env.globals["app_version_label"] = get_app_version_label()
 
     @app.get("/health", tags=["System"], summary="Health check", include_in_schema=docs_on)
     async def health():
-        return {"status": "ok", "service": settings.app_name}
+        return {"status": "ok", "service": settings.app_name, "version": app_version}
 
     @app.get("/", include_in_schema=False)
     async def index(request: Request):

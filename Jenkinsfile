@@ -1,21 +1,15 @@
-// Wrapped — CI: multi-arch (amd64+arm64) build & push to Harbor + Docker Hub
+// Wrapped — CI: auto SemVer bump + multi-arch push (Harbor + Docker Hub) + deploy
 //
-// Триггер: push в main (webhook Gitea → Jenkins Multibranch / Pipeline from SCM).
-// После успешного Build & push → trigger job DEPLOY_JOB (Jenkinsfile.deploy).
+// Триггер: push в main (webhook Gitea → Jenkins Multibranch).
+// Коммиты с [skip ci] в сообщении — без повторного bump (анти-цикл после version commit).
 //
-// Credentials в Jenkins (Manage Credentials → System → Global):
-//   harbor-devops-tools-push-pull-access — Username with password (Harbor devops-tools)
-//   docker-hub                          — Username with password (Docker Hub)
+// Credentials:
+//   harbor-devops-tools-push-pull-access — Harbor devops-tools
+//   docker-hub                          — Docker Hub
+//   gitea-ssh (или GIT_SSH_CREDENTIALS_ID) — SSH для push bump-коммита
 //
-// Agent: cloud kubernetes, pod template default (labels docker / dind)
-//
-// Образы:
-//   hub.antropoff.ru/devops-tools/wrapped:<sha|0.1.0|latest>
-//   inecs/wrapped:<sha|0.1.0|latest>
-//
-// Связка Build → Deploy:
-//   Multibranch Deploy job, Script Path = Jenkinsfile.deploy
-//   путь по умолчанию: devops-tools/wrapped/wrapped-deploy/main (поменяй DEPLOY_JOB при другом имени)
+// Версия: файл VERSION (+ pyproject / Helm). Теги образа: :<semver>, :<sha>, :latest
+// Deploy: devops-tools/wrapped/wrapped-deploy/main
 
 pipeline {
     agent { label 'docker' }
@@ -31,11 +25,11 @@ pipeline {
         HARBOR_REGISTRY   = 'hub.antropoff.ru'
         HARBOR_IMAGE      = 'hub.antropoff.ru/devops-tools/wrapped'
         DOCKERHUB_IMAGE   = 'inecs/wrapped'
-        IMAGE_VERSION     = '0.1.0'
         RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
-        // Multibranch fullName (не display name): devops-tools » wrapped » wrapped-deploy » main
         DEPLOY_JOB        = 'devops-tools/wrapped/wrapped-deploy/main'
+        // SSH credential для git push bump (тот же ключ, что SCM Gitea)
+        GIT_SSH_CREDENTIALS_ID = 'gitea-ssh'
         TZ                = 'Europe/Moscow'
     }
 
@@ -46,11 +40,40 @@ pipeline {
             }
         }
 
-        stage('Build & push') {
+        stage('Version') {
             when {
                 anyOf {
                     branch 'main'
                     branch 'master'
+                }
+            }
+            steps {
+                container('docker') {
+                    script {
+                        sh 'apk add --no-cache python3 git openssh-client >/dev/null'
+                        def lastMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                        if (lastMsg.contains('[skip ci]')) {
+                            env.IMAGE_VERSION = sh(script: 'cat VERSION', returnStdout: true).trim()
+                            env.SKIP_CI = '1'
+                            echo "Skip CI for version-bump commit ([skip ci]); VERSION=${env.IMAGE_VERSION}"
+                        } else {
+                            env.IMAGE_VERSION = sh(
+                                script: 'PYTHONPATH=. python3 scripts/bump_version.py patch',
+                                returnStdout: true
+                            ).trim()
+                            env.SKIP_CI = '0'
+                            echo "Bumped VERSION → ${env.IMAGE_VERSION}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build & push') {
+            when {
+                allOf {
+                    anyOf { branch 'main'; branch 'master' }
+                    expression { return env.SKIP_CI != '1' }
                 }
             }
             steps {
@@ -70,6 +93,9 @@ pipeline {
                         sh '''
                             set -eux
 
+                            test -n "${IMAGE_VERSION}"
+                            echo "Building tags: ${IMAGE_VERSION}, ${RELEASE_TAG}, latest"
+
                             echo "$HARBOR_PASS" | docker login "$HARBOR_REGISTRY" -u "$HARBOR_USER" --password-stdin
                             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
 
@@ -77,7 +103,6 @@ pipeline {
                             docker buildx create --name "$BUILDX_BUILDER" --driver docker-container --use
                             docker buildx inspect --bootstrap >/dev/null
 
-                            # Per-arch images → both registries (Harbor is happier than a single multi-arch --push)
                             docker buildx build \
                               --platform linux/amd64 \
                               --provenance=false --sbom=false --push \
@@ -92,7 +117,6 @@ pipeline {
                               -t "${DOCKERHUB_IMAGE}:${RELEASE_TAG}-arm64" \
                               -f Dockerfile .
 
-                            # Multi-arch manifests: :sha, :0.1.0, :latest on each registry
                             for IMAGE in "$HARBOR_IMAGE" "$DOCKERHUB_IMAGE"; do
                               docker buildx imagetools create \
                                 -t "${IMAGE}:${RELEASE_TAG}" \
@@ -103,9 +127,9 @@ pipeline {
                             done
 
                             echo "--- Harbor ---"
-                            docker buildx imagetools inspect "${HARBOR_IMAGE}:${RELEASE_TAG}" | sed -n '1,40p'
+                            docker buildx imagetools inspect "${HARBOR_IMAGE}:${IMAGE_VERSION}" | sed -n '1,40p'
                             echo "--- Docker Hub ---"
-                            docker buildx imagetools inspect "${DOCKERHUB_IMAGE}:${RELEASE_TAG}" | sed -n '1,40p'
+                            docker buildx imagetools inspect "${DOCKERHUB_IMAGE}:${IMAGE_VERSION}" | sed -n '1,40p'
 
                             docker buildx rm "$BUILDX_BUILDER" || true
                         '''
@@ -114,11 +138,40 @@ pipeline {
             }
         }
 
+        stage('Commit version') {
+            when {
+                allOf {
+                    anyOf { branch 'main'; branch 'master' }
+                    expression { return env.SKIP_CI != '1' }
+                }
+            }
+            steps {
+                container('docker') {
+                    sshagent(credentials: [env.GIT_SSH_CREDENTIALS_ID]) {
+                        sh '''
+                            set -eux
+                            git config user.email "jenkins@antropoff.ru"
+                            git config user.name "Jenkins"
+                            git add VERSION pyproject.toml helm/wrapped/Chart.yaml helm/wrapped/values.yaml
+                            if git diff --cached --quiet; then
+                              echo "No version files to commit"
+                              exit 0
+                            fi
+                            git commit -m "Bump version to ${IMAGE_VERSION} [skip ci]."
+                            # Multibranch detached HEAD → push to branch name
+                            BRANCH="${BRANCH_NAME:-main}"
+                            git push origin "HEAD:refs/heads/${BRANCH}"
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('Trigger deploy') {
             when {
-                anyOf {
-                    branch 'main'
-                    branch 'master'
+                allOf {
+                    anyOf { branch 'main'; branch 'master' }
+                    expression { return env.SKIP_CI != '1' }
                 }
             }
             steps {
@@ -141,12 +194,13 @@ pipeline {
 
     post {
         success {
+            echo "✓ Version:   ${IMAGE_VERSION}"
             echo "✓ Harbor:    ${HARBOR_IMAGE}:{${RELEASE_TAG},${IMAGE_VERSION},latest}"
             echo "✓ Docker Hub: ${DOCKERHUB_IMAGE}:{${RELEASE_TAG},${IMAGE_VERSION},latest}"
             echo "✓ Deploy:    ${DEPLOY_JOB} (${DOCKERHUB_IMAGE}:${IMAGE_VERSION})"
         }
         failure {
-            echo "✗ Сборка, push или trigger deploy не удались — см. лог стадий"
+            echo "✗ Version / build / push / deploy — см. лог стадий"
         }
         always {
             script {

@@ -27,7 +27,7 @@
 | **Расшифровка** | Прокрутка превью текста по вертикали и горизонтали; кнопка **Копировать** рядом со скачиванием |
 | **Пароль** | Argon2-проверка *до* выдачи ciphertext; лимит попыток; пустой пароль попытку не тратит; структурированные ошибки в UI |
 | **Админка** | Стартовая **Статистика** (MinIO, wraps, audit); очистка audit с подтверждением; пагинация журнала |
-| **Релиз** | `make release` / Jenkins CI+CD: multi-arch → Harbor и Docker Hub; Helm upgrade в k3s (`Jenkinsfile.deploy`, как addon-wrapped) |
+| **Релиз** | Авто-SemVer (`VERSION`); Jenkins CI+CD: multi-arch → Harbor/Hub; Helm upgrade в k3s |
 
 Подробности — в разделах ниже (безопасность, админка, сборка образа).
 
@@ -432,7 +432,20 @@ docker buildx build \
 | Harbor | `hub.antropoff.ru/devops-tools/wrapped` |
 | Docker Hub | `inecs/wrapped` |
 
-Теги на каждый реестр: `:<short-sha>`, `:0.1.0`, `:latest` (плюс служебные `:<sha>-amd64` / `:<sha>-arm64`).
+Теги на каждый реестр: `:<semver>` (из `VERSION`, авто +0.0.1 на каждый CI build), `:<short-sha>`, `:latest`.
+
+### Версионирование
+
+Источник правды — файл [`VERSION`](VERSION) (SemVer). Синхронизируется в `pyproject.toml` и Helm (`Chart.yaml`, `values.yaml` image.tag).
+
+| Где | Поведение |
+|-----|-----------|
+| UI | справа в футере: `vX.Y.Z` |
+| `make bump-patch` / `bump-minor` | ручной bump |
+| `make push` | автоматически `bump-patch`, затем commit/push |
+| Jenkins (`Jenkinsfile`) | на `main` автоматически `bump-patch`, образ с новым тегом, commit `Bump version to X.Y.Z [skip ci].`, затем Deploy |
+
+Коммиты с `[skip ci]` не бампят версию снова (анти-цикл). Credential для push bump: `GIT_SSH_CREDENTIALS_ID` (по умолчанию `gitea-ssh`) — тот же SSH-ключ, что для SCM.
 
 Credentials (как в актуальном `Jenkinsfile`):
 
@@ -471,14 +484,14 @@ kubectl -n wrapped rollout status deployment/wrapped
 | Параметр job | Умолч. | Смысл |
 |--------------|--------|--------|
 | `IMAGE_REPOSITORY` | `inecs/wrapped` | как `wrapped_image_repository` |
-| `IMAGE_TAG` | `0.1.0` | как `wrapped_image_tag` (`latest` / short-sha после build) |
+| `IMAGE_TAG` | из `VERSION` / CI | SemVer образа (`Always` подтянет новый) |
 | `IMAGE_PULL_POLICY` | `Always` | как в addon |
 
 Credential: `k3s-kubeconfig` (Secret file) — тот же, что у devops.org.ru.
 
-Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после успешного **Build & push** стадия **Trigger deploy** вызывает Multibranch job `Devops Tools/Wrapped Deploy/main` с параметрами `inecs/wrapped` / `0.1.0` / `Always` (`wait: true`). Если имя folder/job другое — поменяй `DEPLOY_JOB` в `Jenkinsfile`.
+Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с актуальным SemVer (`wait: true`). Credential SSH для version-commit: `gitea-ssh` (или поменяй `GIT_SSH_CREDENTIALS_ID`).
 
-Ручной запуск Deploy по-прежнему: **Build with Parameters**.
+Ручной запуск Deploy: **Build with Parameters** (пустой `IMAGE_TAG` → `cat VERSION`).
 
 ### Git (`make push`)
 
