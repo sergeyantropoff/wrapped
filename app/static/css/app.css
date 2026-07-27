@@ -205,8 +205,11 @@ html[data-theme="dark"] .icon-btn:hover {
 
 .shell {
   max-width: 860px;
+  width: 100%;
   margin: 0 auto;
   padding: 0.5rem 1.25rem 3rem;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .hero-panel {
@@ -217,6 +220,10 @@ html[data-theme="dark"] .icon-btn:hover {
   box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
   animation: rise 0.55s ease both;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 @keyframes rise {
@@ -242,7 +249,12 @@ html[data-theme="dark"] .icon-btn:hover {
 
 .lede { color: var(--muted); margin: 0 0 1.5rem; max-width: 42rem; }
 
-.composer, .success-panel, .result-panel { display: grid; gap: 0.9rem; }
+.composer, .success-panel, .result-panel {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+  max-width: 100%;
+}
 .result-panel > .success-callout {
   justify-self: stretch;
 }
@@ -548,6 +560,8 @@ body.busy-open { overflow: hidden; }
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 .item-card-head > div {
   min-width: 0;
@@ -963,20 +977,33 @@ html[data-theme="light"] .footer-pillars li {
   transform: none;
 }
 
-.items { display: grid; gap: 1rem; }
+.items {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
+}
 .item-card {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 1rem;
   background: var(--input);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .item-card pre,
 .item-card .item-text-pre {
+  display: block;
   margin: 0.6rem 0 0;
+  max-width: 100%;
+  min-width: 0;
   max-height: min(60vh, 28rem);
   padding: 0.8rem;
   border-radius: 8px;
   background: rgba(0,0,0,0.25);
+  box-sizing: border-box;
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -987,6 +1014,7 @@ html[data-theme="light"] .footer-pillars li {
 .item-card .item-text-pre code {
   display: block;
   width: max-content;
+  max-width: none;
   min-width: 100%;
   margin: 0;
   padding: 0;
