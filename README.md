@@ -492,7 +492,7 @@ kubectl -n wrapped rollout status deployment/wrapped
 
 Credential: `k3s-kubeconfig` (Secret file) — kubeconfig к K3S.
 
-Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** (чтение `VERSION`) + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с тем же SemVer (`wait: true`).
+Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после успешного **Build image** (DinD) стадия **Trigger deploy** с `wait: false` и `agent none` — под Builder освобождается, затем отдельно стартует Deploy. Так на кластере не нужны два DinD одновременно.
 
 Ручной запуск Deploy: **Build with Parameters** (пустой `IMAGE_TAG` → `cat VERSION`).
 
