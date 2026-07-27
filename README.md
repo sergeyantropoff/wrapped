@@ -27,7 +27,7 @@
 | **Расшифровка** | Прокрутка превью текста по вертикали и горизонтали; кнопка **Копировать** рядом со скачиванием |
 | **Пароль** | Argon2-проверка *до* выдачи ciphertext; лимит попыток; пустой пароль попытку не тратит; структурированные ошибки в UI |
 | **Админка** | Стартовая **Статистика** (MinIO, wraps, audit); очистка audit с подтверждением; пагинация журнала |
-| **Релиз** | `make release` / Jenkins CI: **multi-arch** `linux/amd64` + `linux/arm64` → Harbor `devops-tools/wrapped` и Docker Hub `inecs/wrapped` (`:sha`, `:0.1.0`, `:latest`) |
+| **Релиз** | `make release` / Jenkins CI+CD: multi-arch → Harbor и Docker Hub; Helm upgrade в k3s (`Jenkinsfile.deploy`, как addon-wrapped) |
 
 Подробности — в разделах ниже (безопасность, админка, сборка образа).
 
@@ -425,23 +425,58 @@ docker buildx build \
 
 ### Jenkins CI (Harbor + Docker Hub)
 
-После push в ветку **`main`** Jenkins собирает multi-arch образ (`linux/amd64` + `linux/arm64`) и пушит в оба реестра:
+После push в ветку **`main`** job со Script Path [`Jenkinsfile`](Jenkinsfile) собирает multi-arch образ (`linux/amd64` + `linux/arm64`) и пушит в оба реестра:
 
 | Реестр | Образ |
 |--------|--------|
 | Harbor | `hub.antropoff.ru/devops-tools/wrapped` |
 | Docker Hub | `inecs/wrapped` |
 
-Теги на каждый реестр: `:<short-sha>`, `:0.1.0`, `:latest` (плюс служебные `:<sha>-amd64` / `:<sha>-arm64` для сборки манифеста).
+Теги на каждый реестр: `:<short-sha>`, `:0.1.0`, `:latest` (плюс служебные `:<sha>-amd64` / `:<sha>-arm64`).
 
-Credentials в Jenkins:
+Credentials (как в актуальном `Jenkinsfile`):
 
 | ID | Тип | Назначение |
 |----|-----|------------|
-| `harbor-antropoff` | Username/password | robot для `hub.antropoff.ru` |
-| `dockerhub-inecs` | Username/password | Docker Hub `inecs` + access token |
+| `harbor-devops-tools-push-pull-access` | Username/password | Harbor `devops-tools` |
+| `docker-hub` | Username/password | Docker Hub |
 
-Job: Multibranch Pipeline или Pipeline from SCM на этот репозиторий + webhook на push. Pipeline описан в корневом [`Jenkinsfile`](Jenkinsfile).
+Agent: label `docker` (pod template с container `docker` / DinD).
+
+### Jenkins CD (Helm → k3s)
+
+Как в аддоне [DevOpsTools/K3S `addons/wrapped`](https://git.antropoff.ru/DevOpsTools/K3S): релиз **`wrapped`**, namespace **`wrapped`**, образ по умолчанию `inecs/wrapped:0.1.0`, `pullPolicy: Always`.
+
+**Первый install** — только с хоста/CI ansible:
+
+```bash
+make addon-wrapped   # в репозитории K3S / k3s-ansible
+```
+
+Дальше обновление образа — отдельный Jenkins job, Script Path = [`Jenkinsfile.deploy`](Jenkinsfile.deploy):
+
+```text
+helm upgrade wrapped ./helm/wrapped \
+  --namespace wrapped \
+  --reuse-values \
+  --set image.repository=… \
+  --set image.tag=… \
+  --set image.pullPolicy=Always \
+  --atomic --wait --timeout 600s
+kubectl -n wrapped rollout status deployment/wrapped
+```
+
+`--reuse-values` сохраняет Ingress, секреты, Postgres/MinIO с кластера (то, что зашил addon).
+
+| Параметр job | Умолч. | Смысл |
+|--------------|--------|--------|
+| `IMAGE_REPOSITORY` | `inecs/wrapped` | как `wrapped_image_repository` |
+| `IMAGE_TAG` | `0.1.0` | как `wrapped_image_tag` (`latest` / short-sha после build) |
+| `IMAGE_PULL_POLICY` | `Always` | как в addon |
+
+Credential: `k3s-kubeconfig` (Secret file) — тот же, что у devops.org.ru.
+
+Рекомендуемая связка job’ов: после успешного **Wrapped Builder** (build) → триггер **Wrapped Deploy** (этот `Jenkinsfile.deploy`), либо ручной **Build with Parameters**.
 
 ### Git (`make push`)
 
