@@ -3,10 +3,11 @@
 // Триггер: push в main (webhook Gitea → Jenkins Multibranch).
 // Коммиты с [skip ci] в сообщении — без повторного bump (анти-цикл после version commit).
 //
-// Credentials:
-//   harbor-devops-tools-push-pull-access — Harbor devops-tools
-//   docker-hub                          — Docker Hub
-//   gitea-ssh (или GIT_SSH_CREDENTIALS_ID) — SSH для push bump-коммита
+// Credentials (Manage Jenkins → Credentials → Global):
+//   harbor-devops-tools-push-pull-access — Harbor devops-tools (robot)
+//   docker-hub                          — Docker Hub (inecs)
+//   ssh-gitea-key                       — SSH к Gitea (push bump VERSION)
+//   gitea-jenkins-token                 — token Gitea (если нужен API; SCM обычно ssh-gitea-key)
 //
 // Версия: файл VERSION (+ pyproject / Helm). Теги образа: :<semver>, :<sha>, :latest
 // Deploy: devops-tools/wrapped/wrapped-deploy/main
@@ -28,8 +29,8 @@ pipeline {
         RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
         DEPLOY_JOB        = 'devops-tools/wrapped/wrapped-deploy/main'
-        // SSH credential для git push bump (тот же ключ, что SCM Gitea)
-        GIT_SSH_CREDENTIALS_ID = 'gitea-ssh'
+        // SSH «Доступ к Gitea по SSH» — push bump-коммита VERSION
+        GIT_SSH_CREDENTIALS_ID = 'ssh-gitea-key'
         TZ                = 'Europe/Moscow'
     }
 

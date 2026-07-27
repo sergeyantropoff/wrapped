@@ -445,14 +445,17 @@ docker buildx build \
 | `make push` | автоматически `bump-patch`, затем commit/push |
 | Jenkins (`Jenkinsfile`) | на `main` автоматически `bump-patch`, образ с новым тегом, commit `Bump version to X.Y.Z [skip ci].`, затем Deploy |
 
-Коммиты с `[skip ci]` не бампят версию снова (анти-цикл). Credential для push bump: `GIT_SSH_CREDENTIALS_ID` (по умолчанию `gitea-ssh`) — тот же SSH-ключ, что для SCM.
+Коммиты с `[skip ci]` не бампят версию снова (анти-цикл). Push bump VERSION — credential `ssh-gitea-key` (Доступ к Gitea по SSH).
 
-Credentials (как в актуальном `Jenkinsfile`):
+Credentials (Global, как в job’ах):
 
 | ID | Тип | Назначение |
 |----|-----|------------|
-| `harbor-devops-tools-push-pull-access` | Username/password | Harbor `devops-tools` |
-| `docker-hub` | Username/password | Docker Hub |
+| `ssh-gitea-key` | SSH Username with private key | SCM + push bump VERSION |
+| `gitea-jenkins-token` | Secret text / token | API Gitea (webhook/API при необходимости) |
+| `harbor-devops-tools-push-pull-access` | Username/password | Harbor `devops-tools` (robot) |
+| `docker-hub` | Username/password | Docker Hub `inecs` |
+| `k3s-kubeconfig` | Secret file | Helm/kubectl deploy в K3S |
 
 Agent: label `docker` (pod template с container `docker` / DinD).
 
@@ -487,9 +490,9 @@ kubectl -n wrapped rollout status deployment/wrapped
 | `IMAGE_TAG` | из `VERSION` / CI | SemVer образа (`Always` подтянет новый) |
 | `IMAGE_PULL_POLICY` | `Always` | как в addon |
 
-Credential: `k3s-kubeconfig` (Secret file) — тот же, что у devops.org.ru.
+Credential: `k3s-kubeconfig` (Secret file) — kubeconfig к K3S.
 
-Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с актуальным SemVer (`wait: true`). Credential SSH для version-commit: `gitea-ssh` (или поменяй `GIT_SSH_CREDENTIALS_ID`).
+Рекомендуемая связка job’ов уже в [`Jenkinsfile`](Jenkinsfile): после **Version** + **Build & push** стадия **Trigger deploy** вызывает `devops-tools/wrapped/wrapped-deploy/main` с актуальным SemVer (`wait: true`). Push VERSION: `ssh-gitea-key`.
 
 Ручной запуск Deploy: **Build with Parameters** (пустой `IMAGE_TAG` → `cat VERSION`).
 

@@ -7,8 +7,8 @@
 // Job: отдельный Multibranch Pipeline, Script Path = Jenkinsfile.deploy
 // Имя по умолчанию (см. DEPLOY_JOB в Jenkinsfile): «Devops Tools/Wrapped Deploy»
 // Триггер: вручную (Build with Parameters) или автоматически из Jenkinsfile после Build & push
-// Credentials:
-//   k3s-kubeconfig — Secret file (kubeconfig), как у devops.org.ru
+// Credentials (Global):
+//   k3s-kubeconfig — Secret file (kubeconfig к K3S)
 //
 // Agent: cloud kubernetes, label docker (pod template с container docker)
 //
