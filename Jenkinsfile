@@ -53,25 +53,18 @@ pipeline {
 
                 stage('Version') {
                     steps {
-                        container('docker') {
-                            script {
-                                env.IMAGE_VERSION = sh(
-                                    script: "tr -d '[:space:]' < VERSION",
-                                    returnStdout: true
-                                ).trim()
-                                if (!env.IMAGE_VERSION) {
-                                    error('VERSION file is empty')
-                                }
-                                env.RELEASE_TAG = sh(
-                                    script: 'git rev-parse --short=7 HEAD',
-                                    returnStdout: true
-                                ).trim()
-                                if (!env.RELEASE_TAG) {
-                                    error('could not resolve short git SHA for RELEASE_TAG')
-                                }
-                                echo "IMAGE_VERSION from VERSION → ${env.IMAGE_VERSION}"
-                                echo "RELEASE_TAG → ${env.RELEASE_TAG}"
+                        script {
+                            // Без git в DinD-контейнере: dubious ownership → exit 128
+                            env.IMAGE_VERSION = readFile('VERSION').trim()
+                            if (!env.IMAGE_VERSION) {
+                                error('VERSION file is empty')
                             }
+                            if (!env.GIT_COMMIT) {
+                                error('GIT_COMMIT is empty after checkout')
+                            }
+                            env.RELEASE_TAG = env.GIT_COMMIT.take(7)
+                            echo "IMAGE_VERSION from VERSION → ${env.IMAGE_VERSION}"
+                            echo "RELEASE_TAG → ${env.RELEASE_TAG}"
                         }
                     }
                 }
