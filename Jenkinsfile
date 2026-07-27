@@ -15,7 +15,7 @@
 //
 // Связка Build → Deploy:
 //   Multibranch Deploy job, Script Path = Jenkinsfile.deploy
-//   путь по умолчанию: «Devops Tools/Wrapped Deploy/main» (поменяй DEPLOY_JOB при другом имени)
+//   путь по умолчанию: devops-tools/wrapped/wrapped-deploy/main (поменяй DEPLOY_JOB при другом имени)
 
 pipeline {
     agent { label 'docker' }
@@ -34,8 +34,8 @@ pipeline {
         IMAGE_VERSION     = '0.1.0'
         RELEASE_TAG       = "${env.GIT_COMMIT?.take(7) ?: 'dev'}"
         BUILDX_BUILDER    = "jenkins-wrapped-${env.BUILD_NUMBER}"
-        // Multibranch: Folder/Job/branch — как в UI «Devops Tools » Wrapped Deploy » main»
-        DEPLOY_JOB        = 'Devops Tools/Wrapped Deploy/main'
+        // Multibranch fullName (не display name): devops-tools » wrapped » wrapped-deploy » main
+        DEPLOY_JOB        = 'devops-tools/wrapped/wrapped-deploy/main'
         TZ                = 'Europe/Moscow'
     }
 
