@@ -443,7 +443,7 @@ docker buildx build \
 | Harbor | `hub.antropoff.ru/devops-tools/wrapped` |
 | Docker Hub | `inecs/wrapped` |
 
-Теги на каждый реестр: `:<semver>` (ровно из `VERSION` в коммите), `:<short-sha>`, `:latest`.
+Публичные теги на каждый реестр: `:<semver>` (из `VERSION` в коммите) и `:latest`. Short-sha больше не пушится. Промежуточные `:<semver>-amd64` / `-arm64` остаются только в Harbor для сборки multi-arch manifest.
 
 ### Версионирование
 
