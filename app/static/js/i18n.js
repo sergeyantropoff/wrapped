@@ -379,6 +379,8 @@
       "create.maxOpensInvalid": "Недопустимое число открытий.",
       "create.availableFrom": "Доступно с (необязательно)",
       "create.availableFromHint": "Пусто = доступно сразу",
+      "create.availableFromDate": "Выбрать дату",
+      "create.availableFromTime": "Выбрать время",
       "create.availableFromPast": "«Доступно с» не может быть в прошлом.",
       "create.availableFromAfterExpiry": "«Доступно с» должно быть раньше срока истечения.",
       "create.opensBadge": "{n} открытий",
