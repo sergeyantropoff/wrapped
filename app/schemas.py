@@ -17,6 +17,7 @@ class PublicSettingsOut(BaseModel):
     password_mode: str
     password_mode_description: dict[str, str]
     password_max_attempts: int
+    max_opens_limit: int
 
 
 class WrapCreateRequest(BaseModel):
@@ -27,6 +28,8 @@ class WrapCreateRequest(BaseModel):
     has_password: bool = False
     password: str | None = None
     captcha_token: str | None = None
+    max_opens: int = Field(default=1, ge=1, le=10)
+    available_from: datetime | None = None
 
 
 class WrapCreateResponse(BaseModel):
@@ -34,6 +37,8 @@ class WrapCreateResponse(BaseModel):
     expires_at: datetime
     password_mode: str
     share_path: str
+    max_opens: int = 1
+    available_from: datetime | None = None
 
 
 class UnwrapRequest(BaseModel):
@@ -48,6 +53,10 @@ class UnwrapResponse(BaseModel):
     has_password: bool
     password_mode: str
     size_bytes: int
+    max_opens: int = 1
+    opens_used: int = 1
+    opens_remaining: int = 0
+    destroyed: bool = True
 
 
 class AdminLoginRequest(BaseModel):
@@ -68,6 +77,7 @@ class AdminSettingsUpdate(BaseModel):
     hcaptcha_site_key: str | None = None
     password_mode: str | None = None
     password_max_attempts: int | None = Field(default=None, ge=1, le=50)
+    max_opens_limit: int | None = Field(default=None, ge=1, le=10)
     audit_retention_days: int | None = None
 
 

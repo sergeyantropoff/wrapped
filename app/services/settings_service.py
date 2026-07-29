@@ -70,4 +70,5 @@ def public_settings_payload(row: AppSettings) -> dict:
         "password_mode": row.password_mode.value,
         "password_mode_description": PASSWORD_MODE_HELP,
         "password_max_attempts": max(1, int(row.password_max_attempts or 3)),
+        "max_opens_limit": max(1, min(10, int(getattr(row, "max_opens_limit", None) or 3))),
     }

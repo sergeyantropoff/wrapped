@@ -14,6 +14,11 @@
     </div>
 
     <label class="sr-only" for="payload-text" data-i18n="create.text">Text</label>
+    <div class="template-chips" id="template-chips" role="group" aria-label="Templates"></div>
+    <div class="field">
+      <label for="text-label" data-i18n="create.itemLabel">Label (optional)</label>
+      <input id="text-label" type="text" maxlength="120" data-i18n-placeholder="create.itemLabelPlaceholder" placeholder="e.g. Instructions" />
+    </div>
     <div class="code-editor" id="code-editor">
       <pre class="code-highlight" aria-hidden="true"><code id="code-highlight" class="hljs"></code></pre>
       <textarea id="payload-text" class="code-input" spellcheck="false" data-i18n-placeholder="create.textPlaceholder" placeholder="Paste secrets, configs, notes…"></textarea>
@@ -30,6 +35,17 @@
       <div class="field">
         <label for="ttl-seconds" data-i18n="create.ttl">Time to live</label>
         <select id="ttl-seconds"></select>
+      </div>
+      <div class="field">
+        <label for="max-opens" data-i18n="create.maxOpens">Opens</label>
+        <select id="max-opens"></select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label for="available-from" data-i18n="create.availableFrom">Available from (optional)</label>
+        <input id="available-from" type="datetime-local" />
+        <p class="hint" data-i18n="create.availableFromHint">Empty = available immediately</p>
       </div>
       <div class="field">
         <label for="password" data-i18n="create.password">Password (optional)</label>
@@ -82,6 +98,8 @@
             Do not send the password in the same chat as the link.
           </p>
         </div>
+
+        <div id="success-meta-badges" class="success-meta-badges"></div>
 
         <label for="share-link" data-i18n="create.shareLink">Share link</label>
         <div class="copy-row">

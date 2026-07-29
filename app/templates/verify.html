@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · Wrapped{% endblock %}
+{% block content %}
+<section class="hero-panel verify-panel">
+  <div class="panel-head">
+    <p class="eyebrow" data-i18n="verify.eyebrow">Verify</p>
+    <h1 data-i18n="verify.title">How to verify Wrapped</h1>
+    <p class="lede" data-i18n="verify.lede">What leaves your browser, what stays on the server, and how the key in #fragment works.</p>
+  </div>
+
+  <div class="verify-sections">
+    <article class="verify-block">
+      <h2 data-i18n="verify.s1.title">Encryption in the browser</h2>
+      <p data-i18n="verify.s1.body">Text and files are packed and encrypted with Web Crypto (AES-GCM) before upload. The server receives only ciphertext plus metadata (TTL, MIME, size, optional password hash).</p>
+    </article>
+    <article class="verify-block">
+      <h2 data-i18n="verify.s2.title">Key in the URL fragment</h2>
+      <p data-i18n="verify.s2.body">The share link looks like /w/&lt;id&gt;#&lt;key&gt;. The part after # never reaches the server in the page request. Without that fragment (or the full wrapped token), ciphertext cannot be decrypted.</p>
+    </article>
+    <article class="verify-block">
+      <h2 data-i18n="verify.s3.title">Opens and destruction</h2>
+      <p data-i18n="verify.s3.body">By default a wrap can be opened once; then ciphertext is deleted. If the sender chose 2–3 opens, the server keeps ciphertext until the last successful unwrap. Expiry and password lockout still destroy the package.</p>
+    </article>
+    <article class="verify-block">
+      <h2 data-i18n="verify.s4.title">Optional password</h2>
+      <p data-i18n="verify.s4.body">When a password is set, the server checks an Argon2 hash before releasing ciphertext. Wrong guesses are limited; empty password does not burn an attempt.</p>
+    </article>
+    <article class="verify-block">
+      <h2 data-i18n="verify.s5.title">Available from</h2>
+      <p data-i18n="verify.s5.body">If “available from” is set, unwrap is rejected until that time. After that, normal open/expiry rules apply.</p>
+    </article>
+  </div>
+
+  <div class="actions actions-center">
+    <a class="btn primary" href="/" data-i18n="verify.createCta">Create a wrap</a>
+  </div>
+</section>
+{% endblock %}

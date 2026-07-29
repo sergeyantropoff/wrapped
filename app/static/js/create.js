@@ -1,11 +1,14 @@
 (() => {
   const t = (k, vars) => window.WrappedI18n.t(k, vars);
+  /** @type {{ file: File, label: string }[]} */
   const files = [];
   let settings = null;
   let captchaWidgetId = null;
 
   const els = {
     text: document.getElementById("payload-text"),
+    textLabel: document.getElementById("text-label"),
+    templateChips: document.getElementById("template-chips"),
     lang: document.getElementById("text-language"),
     langChip: document.getElementById("lang-chip"),
     langChipText: document.getElementById("lang-chip-text"),
@@ -14,6 +17,8 @@
     highlight: document.getElementById("code-highlight"),
     editor: document.getElementById("code-editor"),
     ttl: document.getElementById("ttl-seconds"),
+    maxOpens: document.getElementById("max-opens"),
+    availableFrom: document.getElementById("available-from"),
     password: document.getElementById("password"),
     generatePassword: document.getElementById("generate-password"),
     dropzone: document.getElementById("dropzone"),
@@ -27,6 +32,7 @@
     shareToken: document.getElementById("share-token"),
     sharePassword: document.getElementById("share-password"),
     passwordBlock: document.getElementById("success-password-block"),
+    successMetaBadges: document.getElementById("success-meta-badges"),
     shareQr: document.getElementById("share-qr"),
     expiresMeta: document.getElementById("expires-meta"),
     captchaSlot: document.getElementById("captcha-slot"),
@@ -108,7 +114,7 @@
 
   function estimatePayloadBytes() {
     const textBytes = new TextEncoder().encode(els.text?.value || "").length;
-    const fileBytes = files.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
+    const fileBytes = files.reduce((sum, entry) => sum + (Number(entry.file.size) || 0), 0);
     return textBytes + fileBytes;
   }
 
@@ -136,9 +142,21 @@
 
   function renderFiles() {
     els.fileList.innerHTML = "";
-    files.forEach((f, idx) => {
+    files.forEach((entry, idx) => {
+      const f = entry.file;
       const li = document.createElement("li");
-      li.innerHTML = `<span>${f.name} <small>(${f.type || "file"} · ${window.WrappedUI.formatBytes(f.size)})</small></span>`;
+      li.className = "file-list-item";
+      const meta = document.createElement("span");
+      meta.innerHTML = `${escapeHtml(f.name)} <small>(${escapeHtml(f.type || "file")} · ${window.WrappedUI.formatBytes(f.size)})</small>`;
+      const labelInput = document.createElement("input");
+      labelInput.type = "text";
+      labelInput.className = "file-label-input";
+      labelInput.maxLength = 120;
+      labelInput.placeholder = t("create.itemLabelPlaceholder");
+      labelInput.value = entry.label || "";
+      labelInput.addEventListener("input", () => {
+        entry.label = labelInput.value;
+      });
       const btn = document.createElement("button");
       btn.type = "button";
       btn.textContent = "×";
@@ -146,10 +164,20 @@
         files.splice(idx, 1);
         renderFiles();
       });
+      li.appendChild(meta);
+      li.appendChild(labelInput);
       li.appendChild(btn);
       els.fileList.appendChild(li);
     });
     refreshSizeMeter();
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function addFiles(list) {
@@ -158,21 +186,32 @@
         showError(t("create.mimeDenied") + `: ${f.type || f.name}`);
         continue;
       }
-      files.push(f);
+      files.push({ file: f, label: "" });
     }
     renderFiles();
   }
 
   let lastExpiresAt = null;
+  let lastAvailableFrom = null;
+  let lastMaxOpens = 1;
+
+  function secondsUntilEvening() {
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(20, 0, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    return Math.max(60, Math.round((target.getTime() - now.getTime()) / 1000));
+  }
 
   function fillTtl() {
     if (!settings || !els.ttl) return;
     const max = settings.max_ttl_seconds;
     const def = settings.default_ttl_seconds;
     const selected = els.ttl.value ? Number(els.ttl.value) : def;
+    const evening = secondsUntilEvening();
     const options = [
       { key: "create.ttl.1h", value: 3600 },
-      { key: "create.ttl.6h", value: 6 * 3600 },
+      { key: "create.ttl.evening", value: evening },
       { key: "create.ttl.24h", value: 24 * 3600 },
       { key: "create.ttl.3d", value: 3 * 24 * 3600 },
       { key: "create.ttl.7d", value: 7 * 24 * 3600 },
@@ -190,6 +229,78 @@
         return `<option value="${o.value}" ${o.value === pick ? "selected" : ""}>${label}</option>`;
       })
       .join("");
+  }
+
+  function fillMaxOpens() {
+    if (!els.maxOpens || !settings) return;
+    const limit = Math.max(1, Math.min(10, Number(settings.max_opens_limit) || 3));
+    const uiMax = Math.min(3, limit);
+    const selected = els.maxOpens.value ? Number(els.maxOpens.value) : 1;
+    const pick = selected >= 1 && selected <= uiMax ? selected : 1;
+    els.maxOpens.innerHTML = Array.from({ length: uiMax }, (_, i) => i + 1)
+      .map(
+        (n) =>
+          `<option value="${n}" ${n === pick ? "selected" : ""}>${t("create.maxOpensOption", { n })}</option>`
+      )
+      .join("");
+  }
+
+  function renderTemplates() {
+    if (!els.templateChips) return;
+    els.templateChips.innerHTML = "";
+    const keys = [
+      { id: "access", key: "create.tpl.access" },
+      { id: "code", key: "create.tpl.code" },
+      { id: "fileNote", key: "create.tpl.fileNote" },
+    ];
+    for (const item of keys) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "template-chip";
+      btn.textContent = t(`create.tpl.${item.id}.name`);
+      btn.addEventListener("click", () => {
+        els.text.value = t(`create.tpl.${item.id}.body`);
+        refreshHighlight();
+        refreshSizeMeter();
+      });
+      els.templateChips.appendChild(btn);
+    }
+  }
+
+  function datetimeLocalToIso(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+
+  function formatLocalDateTime(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return new Intl.DateTimeFormat(window.WrappedI18n.locale?.() || undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  }
+
+  function refreshSuccessBadges() {
+    if (!els.successMetaBadges) return;
+    els.successMetaBadges.innerHTML = "";
+    if (lastMaxOpens > 1) {
+      const b = document.createElement("span");
+      b.className = "success-meta-badge";
+      b.textContent = t("create.opensBadge", { n: lastMaxOpens });
+      els.successMetaBadges.appendChild(b);
+    }
+    if (lastAvailableFrom) {
+      const b = document.createElement("span");
+      b.className = "success-meta-badge";
+      b.textContent = t("create.availableFromBadge", {
+        datetime: formatLocalDateTime(lastAvailableFrom),
+      });
+      els.successMetaBadges.appendChild(b);
+    }
   }
 
   function refreshExpiresMeta() {
@@ -239,6 +350,8 @@
     const resp = await fetch("/api/v1/settings");
     settings = await resp.json();
     fillTtl();
+    fillMaxOpens();
+    renderTemplates();
     loadCaptcha();
     setLanguage("plaintext", { silent: true });
     refreshHighlight();
@@ -325,11 +438,14 @@
     }
   }
 
-  function showSuccess({ link, token, password, expiresAt }) {
+  function showSuccess({ link, token, password, expiresAt, availableFrom, maxOpens }) {
     els.shareLink.value = link;
     els.shareToken.value = token;
     lastExpiresAt = expiresAt;
+    lastAvailableFrom = availableFrom || null;
+    lastMaxOpens = maxOpens || 1;
     refreshExpiresMeta();
+    refreshSuccessBadges();
     if (password) {
       els.sharePassword.value = password;
       els.passwordBlock.classList.remove("hidden");
@@ -409,15 +525,18 @@
     const items = [];
     const contentTypes = [];
     if (text.trim()) {
-      items.push({
+      const textItem = {
         type: "text",
         language: els.lang.value,
         content: text,
-      });
+      };
+      const label = (els.textLabel?.value || "").trim();
+      if (label) textItem.label = label.slice(0, 120);
+      items.push(textItem);
       contentTypes.push("text/plain");
     }
-    for (const f of files) {
-      const item = await window.WrappedCrypto.fileToItem(f);
+    for (const entry of files) {
+      const item = await window.WrappedCrypto.fileToItem(entry.file, entry.label);
       items.push(item);
       contentTypes.push(item.mime);
     }
@@ -430,6 +549,8 @@
     }
 
     const password = els.password.value || "";
+    const maxOpens = Number(els.maxOpens?.value || 1);
+    const availableFromIso = datetimeLocalToIso(els.availableFrom?.value || "");
     els.wrapBtn.disabled = true;
     window.WrappedUI.showBusy(t("create.working"));
     try {
@@ -450,9 +571,10 @@
         content_types: contentTypes,
         item_count: items.length,
         has_password: Boolean(password),
-        // Always send password when set so server can gate wrong guesses.
         password: password || null,
         captcha_token: captchaToken() || null,
+        max_opens: maxOpens,
+        available_from: availableFromIso,
       };
       const resp = await fetch("/api/v1/wraps", {
         method: "POST",
@@ -461,7 +583,20 @@
       });
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({}));
-        showError(err.detail || t("common.error"));
+        const detail = err.detail;
+        if (detail === "available_from_past") {
+          showError(t("create.availableFromPast"));
+          return;
+        }
+        if (detail === "available_from_after_expiry") {
+          showError(t("create.availableFromAfterExpiry"));
+          return;
+        }
+        if (detail === "max_opens_invalid") {
+          showError(t("create.maxOpensInvalid"));
+          return;
+        }
+        showError(typeof detail === "string" ? detail : t("common.error"));
         return;
       }
       const data = await resp.json();
@@ -472,6 +607,8 @@
         token,
         password,
         expiresAt: data.expires_at,
+        availableFrom: data.available_from,
+        maxOpens: data.max_opens || maxOpens,
       });
     } catch {
       showError(t("common.error"));
@@ -500,7 +637,10 @@
   if (window.WrappedI18n.onChange) {
     window.WrappedI18n.onChange(() => {
       fillTtl();
+      fillMaxOpens();
+      renderTemplates();
       refreshExpiresMeta();
+      refreshSuccessBadges();
       refreshSizeMeter();
       syncShareControls();
       setLanguage(els.lang.value, { silent: true });

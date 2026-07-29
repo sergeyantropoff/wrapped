@@ -140,6 +140,14 @@ def create_app() -> FastAPI:
             {"title": "Unwrap", "page": "unwrap", "wrap_id": ""},
         )
 
+    @app.get("/verify", include_in_schema=False)
+    async def verify_page(request: Request):
+        return templates.TemplateResponse(
+            request,
+            "verify.html",
+            {"title": "Verify", "page": "verify"},
+        )
+
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
         if (

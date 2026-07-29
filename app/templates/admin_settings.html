@@ -36,6 +36,14 @@
           <span data-i18n="admin.limits.auditRetention">Audit retention (days)</span>
           <input name="audit_retention_days" type="number" value="{{ settings.audit_retention_days }}" />
         </label>
+        <label>
+          <span data-i18n="admin.limits.maxOpens">Max opens per wrap</span>
+          <input name="max_opens_limit" type="number" min="1" max="10" step="1"
+                 value="{{ settings.max_opens_limit or 3 }}" />
+          <small class="hint" data-i18n="admin.limits.maxOpensHint">
+            Ceiling for create UI (1–10). Default: 3.
+          </small>
+        </label>
       </div>
     </section>
 

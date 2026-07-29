@@ -65,6 +65,8 @@ class AppSettings(Base):
     )
     # Wrong unwrap passwords allowed before the wrap is burned (default 3).
     password_max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    # Max allowed max_opens on create (UI shows 1…min(3, limit)).
+    max_opens_limit: Mapped[int] = mapped_column(Integer, default=3)
     audit_retention_days: Mapped[int] = mapped_column(Integer, default=90)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -96,6 +98,9 @@ class Wrap(Base):
         DateTime(timezone=True), server_default=func.now(), index=True
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    available_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    max_opens: Mapped[int] = mapped_column(Integer, default=1)
+    opens_used: Mapped[int] = mapped_column(Integer, default=0)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creator_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     creator_ua: Mapped[str | None] = mapped_column(String(512), nullable=True)

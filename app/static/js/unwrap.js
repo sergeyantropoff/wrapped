@@ -25,6 +25,10 @@
     lightboxCaption: document.getElementById("lightbox-caption"),
     lightboxClose: document.getElementById("lightbox-close"),
     downloadAll: document.getElementById("download-all"),
+    resultCalloutTitle: document.getElementById("result-callout-title"),
+    resultCalloutHint: document.getElementById("result-callout-hint"),
+    resultCalloutFa: document.getElementById("result-callout-fa"),
+    resultOpensHint: document.getElementById("result-opens-hint"),
   };
 
   let lastPack = null;
@@ -273,28 +277,51 @@
     els.downloadAll.setAttribute("aria-label", t("unwrap.downloadAll"));
   }
 
-  function renderPackage(pack) {
+  function renderPackage(pack, meta = {}) {
     revokeAllUrls();
     lastPack = pack;
     els.items.innerHTML = "";
+    const destroyed = meta.destroyed !== false && !(Number(meta.opens_remaining) > 0);
+    const opensRemaining = Number(meta.opens_remaining) || 0;
+    if (els.resultCalloutTitle && els.resultCalloutHint) {
+      if (destroyed) {
+        els.resultCalloutTitle.textContent = t("unwrap.destroyedTitle");
+        els.resultCalloutHint.textContent = t("unwrap.destroyedHint");
+        if (els.resultCalloutFa) els.resultCalloutFa.className = "fa-solid fa-fire";
+      } else {
+        els.resultCalloutTitle.textContent = t("unwrap.stillOnServerTitle");
+        els.resultCalloutHint.textContent = t("unwrap.stillOnServerHint", { n: opensRemaining });
+        if (els.resultCalloutFa) els.resultCalloutFa.className = "fa-solid fa-clock";
+      }
+    }
+    if (els.resultOpensHint) {
+      if (!destroyed && opensRemaining > 0) {
+        els.resultOpensHint.textContent = t("unwrap.opensRemaining", { n: opensRemaining });
+        els.resultOpensHint.classList.remove("hidden");
+      } else {
+        els.resultOpensHint.textContent = "";
+        els.resultOpensHint.classList.add("hidden");
+      }
+    }
     for (const item of pack.items || []) {
       const card = document.createElement("div");
       card.className = "item-card";
+      const label = (item.label || "").trim();
       if (item.type === "text") {
         const lang = item.language || "plaintext";
         const text = item.content || "";
         const head = document.createElement("div");
         head.className = "item-card-head";
-        const meta = document.createElement("div");
+        const metaEl = document.createElement("div");
         const strong = document.createElement("strong");
-        strong.textContent = "text";
-        meta.appendChild(strong);
-        meta.appendChild(document.createTextNode(" · "));
+        strong.textContent = label || "text";
+        metaEl.appendChild(strong);
+        metaEl.appendChild(document.createTextNode(" · "));
         const langEl = document.createElement("span");
         langEl.className = "mono";
         langEl.textContent = lang;
-        meta.appendChild(langEl);
-        head.appendChild(meta);
+        metaEl.appendChild(langEl);
+        head.appendChild(metaEl);
         const actions = document.createElement("div");
         actions.className = "item-card-actions";
         actions.appendChild(makeCopyBtn(() => text));
@@ -318,27 +345,31 @@
         const name = item.name || "file";
         const head = document.createElement("div");
         head.className = "item-card-head";
-        const meta = document.createElement("div");
+        const metaEl = document.createElement("div");
         const strong = document.createElement("strong");
-        strong.textContent = name;
-        meta.appendChild(strong);
-        meta.appendChild(document.createTextNode(" · "));
+        strong.textContent = label || name;
+        metaEl.appendChild(strong);
+        if (label) {
+          metaEl.appendChild(document.createTextNode(" · "));
+          metaEl.appendChild(document.createTextNode(name));
+        }
+        metaEl.appendChild(document.createTextNode(" · "));
         const mimeEl = document.createElement("span");
         mimeEl.className = "mono";
         mimeEl.textContent = mime;
-        meta.appendChild(mimeEl);
-        meta.appendChild(document.createTextNode(` · ${window.WrappedUI.formatBytes(bytes.length)}`));
-        head.appendChild(meta);
+        metaEl.appendChild(mimeEl);
+        metaEl.appendChild(document.createTextNode(` · ${window.WrappedUI.formatBytes(bytes.length)}`));
+        head.appendChild(metaEl);
         head.appendChild(makeDownloadBtn(() => downloadBlob(name, blob)));
         card.appendChild(head);
         if (mime.startsWith("image/")) {
           const url = trackUrl(URL.createObjectURL(blob));
           const img = document.createElement("img");
-          img.alt = name;
+          img.alt = label || name;
           img.src = url;
           img.className = "item-preview-img";
           img.loading = "lazy";
-          img.addEventListener("click", () => openLightbox(url, name));
+          img.addEventListener("click", () => openLightbox(url, label || name));
           card.appendChild(img);
           const tip = document.createElement("p");
           tip.className = "hint item-preview-hint";
@@ -424,6 +455,22 @@
             });
             return;
           }
+          if (detail.code === "not_yet_available") {
+            const when = detail.available_from
+              ? new Intl.DateTimeFormat(window.WrappedI18n.locale?.() || undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(detail.available_from))
+              : "";
+            showState({
+              title: t("unwrap.notYetTitle"),
+              hint: when
+                ? t("unwrap.notYetHint", { datetime: when })
+                : t("unwrap.notYetHintGeneric"),
+              icon: "fa-clock",
+            });
+            return;
+          }
           if (detail.code === "password_required") {
             showError(
               t("unwrap.passwordRequired"),
@@ -477,7 +524,12 @@
         return;
       }
       lastWrapId = parsed.wrapId;
-      renderPackage(pack);
+      renderPackage(pack, {
+        destroyed: data.destroyed !== false && !(Number(data.opens_remaining) > 0),
+        opens_remaining: data.opens_remaining,
+        max_opens: data.max_opens,
+        opens_used: data.opens_used,
+      });
       els.form.classList.add("hidden");
       els.head?.classList.add("hidden");
       els.state?.classList.add("hidden");

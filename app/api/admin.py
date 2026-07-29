@@ -210,6 +210,9 @@ async def settings_save(
     row.password_max_attempts = min(
         50, max(1, as_int("password_max_attempts", row.password_max_attempts or 3))
     )
+    row.max_opens_limit = min(
+        10, max(1, as_int("max_opens_limit", getattr(row, "max_opens_limit", None) or 3))
+    )
     row.turnstile_site_key = str(form.get("turnstile_site_key") or "").strip()
     row.hcaptcha_site_key = str(form.get("hcaptcha_site_key") or "").strip()
 
@@ -408,6 +411,7 @@ async def admin_settings_api(
             "captcha_provider": row.captcha_provider.value,
             "password_mode": row.password_mode.value,
             "password_max_attempts": row.password_max_attempts,
+            "max_opens_limit": getattr(row, "max_opens_limit", None) or 3,
             "audit_retention_days": row.audit_retention_days,
             "rate_limit_create_per_minute": row.rate_limit_create_per_minute,
             "rate_limit_unwrap_per_minute": row.rate_limit_unwrap_per_minute,

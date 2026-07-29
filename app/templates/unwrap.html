@@ -42,15 +42,16 @@
   </div>
 
   <div id="result-panel" class="result-panel hidden">
-    <div class="success-callout" role="status">
+    <div class="success-callout" role="status" id="result-callout">
       <span class="success-callout-icon" aria-hidden="true">
-        <i class="fa-solid fa-fire"></i>
+        <i class="fa-solid fa-fire" id="result-callout-fa"></i>
       </span>
       <span class="success-callout-body">
-        <strong data-i18n="unwrap.destroyedTitle">Server copy destroyed</strong>
-        <span data-i18n="unwrap.destroyedHint">Preview lives only in this browser session.</span>
+        <strong id="result-callout-title" data-i18n="unwrap.destroyedTitle">Server copy destroyed</strong>
+        <span id="result-callout-hint" data-i18n="unwrap.destroyedHint">Preview lives only in this browser session.</span>
       </span>
     </div>
+    <p class="hint success-trust" id="result-opens-hint"></p>
     <p class="hint success-trust" data-i18n="unwrap.trustKey">
       The key was only in the link #fragment and was never sent to the server.
     </p>

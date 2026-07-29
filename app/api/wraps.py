@@ -84,6 +84,11 @@ async def create_wrap(
     if body.ttl_seconds > settings.max_ttl_seconds:
         raise HTTPException(status_code=400, detail="ttl_too_large")
 
+    opens_limit = max(1, min(10, int(getattr(settings, "max_opens_limit", None) or 3)))
+    max_opens = int(body.max_opens or 1)
+    if max_opens < 1 or max_opens > opens_limit:
+        raise HTTPException(status_code=400, detail="max_opens_invalid")
+
     try:
         ciphertext = base64.b64decode(body.ciphertext_b64, validate=True)
     except Exception as exc:
@@ -124,6 +129,18 @@ async def create_wrap(
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(seconds=body.ttl_seconds)
 
+    available_from = body.available_from
+    if available_from is not None:
+        if available_from.tzinfo is None:
+            available_from = available_from.replace(tzinfo=timezone.utc)
+        else:
+            available_from = available_from.astimezone(timezone.utc)
+        # Allow ~2 minutes of clock skew into the past
+        if available_from < now - timedelta(minutes=2):
+            raise HTTPException(status_code=400, detail="available_from_past")
+        if available_from >= expires_at:
+            raise HTTPException(status_code=400, detail="available_from_after_expiry")
+
     await storage.put_bytes(object_key, ciphertext)
 
     wrap = Wrap(
@@ -137,6 +154,9 @@ async def create_wrap(
         password_hash=password_hash,
         password_mode=settings.password_mode,
         expires_at=expires_at,
+        available_from=available_from,
+        max_opens=max_opens,
+        opens_used=0,
         creator_ip=ip,
         creator_ua=(meta["user_agent"] or "")[:512] or None,
     )
@@ -156,6 +176,8 @@ async def create_wrap(
             "ttl_seconds": body.ttl_seconds,
             "has_password": body.has_password,
             "password_mode": settings.password_mode.value,
+            "max_opens": max_opens,
+            "available_from": available_from.isoformat() if available_from else None,
         },
     )
 
@@ -164,6 +186,8 @@ async def create_wrap(
         expires_at=expires_at,
         password_mode=settings.password_mode.value,
         share_path=f"/w/{wrap_id}",
+        max_opens=max_opens,
+        available_from=available_from,
     )
 
 
@@ -237,7 +261,8 @@ async def unwrap(
         fail("unavailable")
 
     assert wrap is not None
-    if wrap.expires_at <= datetime.now(timezone.utc):
+    now = datetime.now(timezone.utc)
+    if wrap.expires_at <= now:
         wrap.status = WrapStatus.expired
         await delete_wrap_object(db, wrap)
         await db.commit()
@@ -250,6 +275,26 @@ async def unwrap(
             details={"reason": "expired"},
         )
         fail("unavailable")
+
+    if wrap.available_from is not None and wrap.available_from > now:
+        await write_audit(
+            db,
+            event_type="wrap.unwrap",
+            success=False,
+            wrap_id=wrap_id,
+            **meta,
+            details={
+                "reason": "not_yet_available",
+                "available_from": wrap.available_from.isoformat(),
+            },
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "not_yet_available",
+                "available_from": wrap.available_from.isoformat(),
+            },
+        )
 
     if wrap.has_password and wrap.password_hash:
         max_attempts = max(1, int(settings.password_max_attempts or 3))
@@ -331,23 +376,25 @@ async def unwrap(
                 },
             )
 
-    # Atomic consume
+    # Atomic open: increment opens_used while still under max_opens
     from sqlalchemy import update
 
     now = datetime.now(timezone.utc)
+    max_opens = max(1, int(wrap.max_opens or 1))
     upd = await db.execute(
         update(Wrap)
         .where(
             Wrap.id == wrap_id,
             Wrap.status == WrapStatus.pending,
             Wrap.expires_at > now,
+            Wrap.opens_used < Wrap.max_opens,
         )
-        .values(status=WrapStatus.consumed, consumed_at=now)
-        .returning(Wrap.id)
+        .values(opens_used=Wrap.opens_used + 1)
+        .returning(Wrap.id, Wrap.opens_used, Wrap.max_opens)
     )
-    consumed = upd.scalar_one_or_none()
+    row = upd.one_or_none()
     await db.commit()
-    if not consumed:
+    if not row:
         await write_audit(
             db,
             event_type="wrap.unwrap",
@@ -357,6 +404,11 @@ async def unwrap(
             details={"reason": "unavailable"},
         )
         fail("unavailable")
+
+    opens_used = int(row.opens_used)
+    max_opens = max(1, int(row.max_opens or 1))
+    opens_remaining = max(0, max_opens - opens_used)
+    destroyed = opens_remaining == 0
 
     try:
         data = await storage.get_bytes(wrap.object_key)
@@ -370,8 +422,17 @@ async def unwrap(
             details={"reason": "storage_error"},
         )
         raise HTTPException(status_code=500, detail="storage_error") from None
-    finally:
-        await delete_wrap_object(db, wrap)
+
+    if destroyed:
+        result = await db.execute(select(Wrap).where(Wrap.id == wrap_id))
+        wrap_row = result.scalar_one_or_none()
+        if wrap_row and wrap_row.status == WrapStatus.pending:
+            wrap_row.status = WrapStatus.consumed
+            wrap_row.consumed_at = now
+            await delete_wrap_object(db, wrap_row)
+            await db.commit()
+        else:
+            await delete_wrap_object(db, wrap)
 
     await write_audit(
         db,
@@ -383,6 +444,9 @@ async def unwrap(
             "size_bytes": wrap.size_bytes,
             "item_count": wrap.item_count,
             "content_types": wrap.content_types,
+            "opens_used": opens_used,
+            "max_opens": max_opens,
+            "destroyed": destroyed,
         },
     )
 
@@ -393,4 +457,8 @@ async def unwrap(
         has_password=wrap.has_password,
         password_mode=wrap.password_mode.value,
         size_bytes=wrap.size_bytes,
+        max_opens=max_opens,
+        opens_used=opens_used,
+        opens_remaining=opens_remaining,
+        destroyed=destroyed,
     )

@@ -252,7 +252,41 @@ html[data-theme="dark"] .icon-btn:hover {
   line-height: 1.15;
 }
 
-.lede { color: var(--muted); margin: 0 0 1.5rem; max-width: 42rem; }
+.verify-sections {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.25rem;
+}
+.verify-block h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+.verify-block p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+#install-app {
+  position: relative;
+  overflow: visible;
+}
+#install-app .ui-tooltip {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%) translateY(4px);
+  white-space: nowrap;
+}
+#install-app .ui-tooltip::after {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+#install-app:hover .ui-tooltip,
+#install-app:focus-visible .ui-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+}
 
 .composer, .success-panel, .result-panel {
   display: grid;
@@ -800,20 +834,66 @@ body.busy-open { overflow: hidden; }
 }
 
 .file-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
-.file-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
+.file-list li,
+.file-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 9rem) auto;
+  gap: 0.45rem;
+  align-items: center;
   padding: 0.55rem 0.75rem;
   border: 1px solid var(--line);
   border-radius: 10px;
   font-size: 0.9rem;
+}
+.file-label-input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.82rem;
 }
 .file-list button {
   border: 0;
   background: transparent;
   color: var(--danger);
   cursor: pointer;
+}
+.template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+}
+.template-chip {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.template-chip:hover,
+.template-chip:focus-visible {
+  color: var(--accent-2);
+  border-color: rgba(75, 134, 240, 0.4);
+  outline: none;
+}
+.success-meta-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.success-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(110, 168, 255, 0.28);
+  background: rgba(110, 168, 255, 0.1);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }

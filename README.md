@@ -341,13 +341,11 @@ services:
 ### UX (v0.1.3+)
 
 - После создания: **QR** на share-link, иконки **скачать QR (PNG)** и **Web Share** (если есть `navigator.share`) под QR; отдельные кнопки Copy для ссылки / токена / пароля; пароль не советуется слать в той же переписке.
-- Create: счётчик размера `≈ used / max` и предупреждение near-limit (сверх лимита — `create.tooLarge`).
-- Unwrap: Enter в поле пароля отправляет форму; после `password_required` / `bad_password` — focus+select; при ≥2 элементах — **скачать всё** (zip через JSZip); trust-строка на результате; спокойный экран «ссылка недоступна» для already used / expired (anti-enumeration); отдельные состояния для `password_locked`, rate limit, CAPTCHA, ошибки расшифровки.
-- Картинки после unwrap: inline-превью и **lightbox** (тап/клик).
-- Тема при первом визите следует `prefers-color-scheme` (пока нет выбора в `localStorage`); лёгкий haptic после успешного Copy.
-- Минимальный **PWA**: `manifest.webmanifest` (без Service Worker для API).
-- UI строки EN/RU через `i18n.js`.
-- Статика (`/static/...`) отдаётся с `?v=версия.mtime` (cache-bust после деплоя).
+- Create: счётчик размера `≈ used / max`; **число открытий** 1–3 (потолок в админке); опционально **«доступно с»** (дата+время); человеческие TTL (в т.ч. «до вечера»); шаблоны текста; подписи элементов пакета.
+- Unwrap: Enter в поле пароля; focus+select при ошибках пароля; zip all; trust-строка; экран **ещё недоступно** до `available_from`; при N>1 ciphertext остаётся до последнего открытия.
+- Картинки: lightbox. Тема: `prefers-color-scheme` при первом визите; haptic на Copy. PWA manifest + кнопка **На экран Домой** (Chrome install / iOS подсказка).
+- Страница [`/verify`](/verify) — как проверить ZK-модель.
+- UI EN/RU. Статика с `?v=версия.mtime`.
 
 ---
 

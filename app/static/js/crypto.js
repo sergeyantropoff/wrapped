@@ -176,14 +176,17 @@
     return b64decode(b64);
   }
 
-  async function fileToItem(file) {
+  async function fileToItem(file, label) {
     const buf = new Uint8Array(await file.arrayBuffer());
-    return {
+    const item = {
       type: "file",
       name: file.name || "file",
       mime: file.type || "application/octet-stream",
       data_b64: b64encode(buf),
     };
+    const trimmed = (label || "").trim();
+    if (trimmed) item.label = trimmed.slice(0, 120);
+    return item;
   }
 
   window.WrappedCrypto = {
