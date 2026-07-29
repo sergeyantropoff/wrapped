@@ -141,14 +141,16 @@ async def collect_stats(db: AsyncSession) -> dict[str, Any]:
         ]
         if since is not None:
             filters.append(AuditEvent.created_at >= since)
+        # One expression for SELECT + GROUP BY (PG rejects duplicate binds as unequal)
+        reason_key = func.coalesce(reason_col, "unknown")
         rows = (
             await db.execute(
                 select(
-                    func.coalesce(reason_col, "unknown"),
+                    reason_key,
                     func.count(AuditEvent.id),
                 )
                 .where(*filters)
-                .group_by(func.coalesce(reason_col, "unknown"))
+                .group_by(reason_key)
                 .order_by(func.count(AuditEvent.id).desc())
             )
         ).all()
