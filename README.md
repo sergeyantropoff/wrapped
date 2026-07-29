@@ -343,7 +343,7 @@ services:
 - После создания: **QR** на share-link, иконки **скачать QR (PNG)** и **Web Share** (если есть `navigator.share`) под QR; отдельные кнопки Copy для ссылки / токена / пароля; пароль не советуется слать в той же переписке.
 - Create: счётчик размера `≈ used / max`; **число открытий** 1–3 (потолок в админке); опционально **«доступно с»** (дата + время); человеческие TTL (в т.ч. «до вечера»).
 - Unwrap: Enter в поле пароля; focus+select при ошибках пароля; zip all; trust-строка; экран **ещё недоступно** до `available_from`; при N>1 ciphertext остаётся до последнего открытия.
-- Картинки: lightbox. Тема: `prefers-color-scheme` при первом визите; haptic на Copy. PWA manifest + кнопка **На экран Домой** (Chrome install / iOS подсказка).
+- Картинки: lightbox. Тема: `prefers-color-scheme` при первом визите; haptic на Copy. PWA manifest.
 - Страница [`/verify`](/verify) — как проверить ZK-модель.
 - UI EN/RU. Статика с `?v=версия.mtime`.
 

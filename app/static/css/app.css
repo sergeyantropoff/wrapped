@@ -267,34 +267,6 @@ html[data-theme="dark"] .icon-btn:hover {
   color: var(--muted);
   line-height: 1.5;
 }
-#install-app {
-  position: relative;
-  overflow: visible;
-}
-#install-app .ui-tooltip {
-  top: calc(100% + 0.5rem);
-  bottom: auto;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%) translateY(-4px);
-  white-space: nowrap;
-}
-#install-app .ui-tooltip::after {
-  top: auto;
-  bottom: 100%;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-bottom-color: var(--line);
-  border-top-color: transparent;
-}
-#install-app:hover .ui-tooltip,
-#install-app:focus-visible .ui-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%);
-}
 .datetime-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1140,6 +1112,63 @@ html[data-theme="light"] .about-version {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.5;
+}
+.about-verify-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(61, 214, 198, 0.28);
+  background: linear-gradient(135deg, rgba(61, 214, 198, 0.1), rgba(110, 168, 255, 0.08));
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.about-verify-link:hover,
+.about-verify-link:focus-visible {
+  border-color: rgba(110, 168, 255, 0.45);
+  background: linear-gradient(135deg, rgba(61, 214, 198, 0.14), rgba(110, 168, 255, 0.14));
+  outline: none;
+  transform: translateY(-1px);
+}
+.about-verify-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(61, 214, 198, 0.14);
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+.about-verify-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+.about-verify-text strong {
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--text);
+}
+.about-verify-text span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.about-verify-arrow {
+  flex-shrink: 0;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+html[data-theme="light"] .about-verify-link {
+  border-color: rgba(47, 111, 237, 0.22);
+  background: linear-gradient(135deg, rgba(14, 160, 140, 0.08), rgba(47, 111, 237, 0.08));
 }
 .about-modal-panel .modal-actions {
   justify-content: flex-end;

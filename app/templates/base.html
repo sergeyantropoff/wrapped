@@ -31,11 +31,6 @@
       </span>
     </a>
     <div class="top-actions">
-      <button type="button" class="icon-btn hidden" id="install-app" aria-describedby="install-app-tip">
-        <i class="fa-solid fa-mobile-screen-button" aria-hidden="true"></i>
-        <span class="sr-only" data-i18n="install.aria">Add to Home Screen</span>
-        <span class="ui-tooltip" id="install-app-tip" role="tooltip" data-i18n="install.tip">Add to Home Screen</span>
-      </button>
       <button type="button" class="icon-btn" id="lang-toggle" title="Language" aria-label="Language">
         <span id="lang-label">RU</span>
       </button>
@@ -55,7 +50,6 @@
     <p class="footer-copy">
       © <span data-i18n="footer.copy.author">Сергей Антропов</span>
       · <a href="https://devops.org.ru" target="_blank" rel="noopener noreferrer">devops.org.ru</a>
-      · <a href="/verify" data-i18n="footer.verify">How to verify</a>
     </p>
   </footer>
 
@@ -71,7 +65,16 @@
         <p data-i18n="about.p2">Можно отправить заметку или код, а также вложения: документы, архивы, скриншоты (drag-and-drop, выбор с диска или вставка из буфера). И текст, и файлы шифруются в браузере до загрузки — на сервер уходит только ciphertext.</p>
         <p data-i18n="about.p3">Сервер никогда не видит plaintext: зашифрованные данные лежат на сервере до тех пор, пока получатель не откроет ссылку с ключом и не расшифрует пакет.</p>
         <p data-i18n="about.p4">После успешной расшифровки копия на сервере уничтожается. Ключ шифрования живёт во фрагменте URL (#…) и не уходит на сервер вместе с запросом страницы. При желании wrap можно дополнительно защитить паролем.</p>
-        <p><a href="/verify" data-i18n="about.verifyLink">How to verify →</a></p>
+        <a class="about-verify-link" href="/verify">
+          <span class="about-verify-icon" aria-hidden="true">
+            <i class="fa-solid fa-shield-halved"></i>
+          </span>
+          <span class="about-verify-text">
+            <strong data-i18n="about.verifyLink">Как проверить</strong>
+            <span data-i18n="about.verifyHint">Что видит сервер и как работает ключ в #…</span>
+          </span>
+          <i class="fa-solid fa-arrow-right about-verify-arrow" aria-hidden="true"></i>
+        </a>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn primary" data-about-close data-i18n="about.close">Понятно</button>
@@ -84,7 +87,6 @@
   <script src="{{ static_url('js/theme.js') }}"></script>
   <script src="{{ static_url('js/ui.js') }}"></script>
   <script src="{{ static_url('js/about.js') }}"></script>
-  <script src="{{ static_url('js/install.js') }}"></script>
   <script src="{{ static_url('js/highlight-ui.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
