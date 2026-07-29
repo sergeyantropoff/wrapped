@@ -4,7 +4,7 @@
   const nav = document.getElementById("admin-nav");
   if (!top || !toggle || !nav) return;
 
-  const mq = window.matchMedia("(max-width: 860px)");
+  const mq = window.matchMedia("(max-width: 1015px)");
 
   const syncLabel = () => {
     const open = top.classList.contains("is-nav-open");

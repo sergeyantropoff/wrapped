@@ -14,11 +14,6 @@
     </div>
 
     <label class="sr-only" for="payload-text" data-i18n="create.text">Text</label>
-    <div class="template-chips" id="template-chips" role="group" aria-label="Templates"></div>
-    <div class="field">
-      <label for="text-label" data-i18n="create.itemLabel">Label (optional)</label>
-      <input id="text-label" type="text" maxlength="120" data-i18n-placeholder="create.itemLabelPlaceholder" placeholder="e.g. Instructions" />
-    </div>
     <div class="code-editor" id="code-editor">
       <pre class="code-highlight" aria-hidden="true"><code id="code-highlight" class="hljs"></code></pre>
       <textarea id="payload-text" class="code-input" spellcheck="false" data-i18n-placeholder="create.textPlaceholder" placeholder="Paste secrets, configs, notes…"></textarea>
@@ -43,8 +38,11 @@
     </div>
     <div class="grid-2">
       <div class="field">
-        <label for="available-from" data-i18n="create.availableFrom">Available from (optional)</label>
-        <input id="available-from" type="datetime-local" />
+        <span class="field-label" data-i18n="create.availableFrom">Available from (optional)</span>
+        <div class="datetime-split">
+          <input id="available-from-date" type="date" aria-label="Date" />
+          <input id="available-from-time" type="time" step="60" aria-label="Time" />
+        </div>
         <p class="hint" data-i18n="create.availableFromHint">Empty = available immediately</p>
       </div>
       <div class="field">
