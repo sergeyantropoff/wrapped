@@ -40,8 +40,22 @@
       <div class="field">
         <span class="field-label" data-i18n="create.availableFrom">Available from (optional)</span>
         <div class="datetime-split">
-          <input id="available-from-date" type="date" aria-label="Date" />
-          <input id="available-from-time" type="time" step="60" aria-label="Time" />
+          <div class="input-with-action">
+            <input id="available-from-date" type="date" aria-label="Date" />
+            <button type="button" class="field-icon-btn" id="available-from-date-btn" aria-describedby="available-from-date-tip">
+              <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+              <span class="sr-only" data-i18n="create.availableFromDate">Pick date</span>
+              <span class="ui-tooltip" id="available-from-date-tip" role="tooltip" data-i18n="create.availableFromDate">Pick date</span>
+            </button>
+          </div>
+          <div class="input-with-action">
+            <input id="available-from-time" type="time" step="60" aria-label="Time" />
+            <button type="button" class="field-icon-btn" id="available-from-time-btn" aria-describedby="available-from-time-tip">
+              <i class="fa-regular fa-clock" aria-hidden="true"></i>
+              <span class="sr-only" data-i18n="create.availableFromTime">Pick time</span>
+              <span class="ui-tooltip" id="available-from-time-tip" role="tooltip" data-i18n="create.availableFromTime">Pick time</span>
+            </button>
+          </div>
         </div>
         <p class="hint" data-i18n="create.availableFromHint">Empty = available immediately</p>
       </div>

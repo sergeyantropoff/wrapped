@@ -72,6 +72,8 @@
       "create.maxOpensInvalid": "Invalid number of opens.",
       "create.availableFrom": "Available from (optional)",
       "create.availableFromHint": "Empty = available immediately",
+      "create.availableFromDate": "Pick date",
+      "create.availableFromTime": "Pick time",
       "create.availableFromPast": "Available-from must not be in the past.",
       "create.availableFromAfterExpiry": "Available-from must be before expiry.",
       "create.opensBadge": "{n} opens",

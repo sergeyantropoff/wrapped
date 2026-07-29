@@ -300,8 +300,25 @@ html[data-theme="dark"] .icon-btn:hover {
   grid-template-columns: 1fr 1fr;
   gap: 0.45rem;
 }
-.datetime-split input {
+.datetime-split .input-with-action > input[type="date"],
+.datetime-split .input-with-action > input[type="time"] {
+  width: 100%;
   min-width: 0;
+  padding-right: 2.75rem;
+  color-scheme: dark;
+}
+html[data-theme="light"] .datetime-split .input-with-action > input[type="date"],
+html[data-theme="light"] .datetime-split .input-with-action > input[type="time"] {
+  color-scheme: light;
+}
+.datetime-split .input-with-action > input[type="date"]::-webkit-calendar-picker-indicator,
+.datetime-split .input-with-action > input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 2.5rem;
+  height: 100%;
+  cursor: pointer;
 }
 .field-label {
   display: block;

@@ -18,6 +18,8 @@
     maxOpens: document.getElementById("max-opens"),
     availableFromDate: document.getElementById("available-from-date"),
     availableFromTime: document.getElementById("available-from-time"),
+    availableFromDateBtn: document.getElementById("available-from-date-btn"),
+    availableFromTimeBtn: document.getElementById("available-from-time-btn"),
     password: document.getElementById("password"),
     generatePassword: document.getElementById("generate-password"),
     dropzone: document.getElementById("dropzone"),
@@ -594,6 +596,23 @@
     els.password.focus();
     els.password.select();
   });
+
+  function openPicker(input) {
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    input.focus();
+    input.click();
+  }
+
+  els.availableFromDateBtn?.addEventListener("click", () => openPicker(els.availableFromDate));
+  els.availableFromTimeBtn?.addEventListener("click", () => openPicker(els.availableFromTime));
 
   if (window.WrappedI18n.onChange) {
     window.WrappedI18n.onChange(() => {
