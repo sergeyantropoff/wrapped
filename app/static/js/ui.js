@@ -8,10 +8,13 @@
     busyEl.className = "busy-overlay hidden";
     busyEl.setAttribute("aria-live", "polite");
     busyEl.setAttribute("aria-busy", "true");
+    const favicon =
+      document.querySelector('link[rel="icon"][type="image/svg+xml"]')?.href ||
+      "/static/favicon.svg";
     busyEl.innerHTML = `
       <div class="busy-card">
         <span class="busy-logo" aria-hidden="true">
-          <img src="/static/favicon.svg" alt="" width="48" height="48" />
+          <img src="${favicon}" alt="" width="48" height="48" />
         </span>
         <p class="busy-text" data-busy-label></p>
       </div>
@@ -48,5 +51,18 @@
     return `${gb.toFixed(2)} GB`;
   }
 
-  window.WrappedUI = { showBusy, hideBusy, formatBytes };
+  function hapticLight() {
+    try {
+      navigator.vibrate?.(12);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function copyText(text) {
+    await navigator.clipboard.writeText(text || "");
+    hapticLight();
+  }
+
+  window.WrappedUI = { showBusy, hideBusy, formatBytes, hapticLight, copyText };
 })();

@@ -11,6 +11,7 @@
 //   harbor-devops-tools-push-pull-access — Harbor devops-tools (robot)
 //   docker-hub                          — Docker Hub (inecs)
 //   ssh-gitea-key                       — SCM checkout Gitea
+//   gitea-jenkins-token                 — Gitea PAT; для статусов коммита: write:repository
 //   k3s-kubeconfig                      — в job Deploy (Jenkinsfile.deploy)
 //
 // Deploy job: devops-tools/wrapped/wrapped-deploy/main

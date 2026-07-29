@@ -117,6 +117,49 @@ async def collect_stats(db: AsyncSession) -> dict[str, Any]:
         else:
             bucket["fail"] += int(count or 0)
 
+    reason_col = AuditEvent.details.op("->>")("reason")
+
+    password_burns = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(AuditEvent)
+                .where(
+                    AuditEvent.event_type == "wrap.unwrap",
+                    AuditEvent.success.is_(False),
+                    reason_col == "password_attempts_exceeded",
+                )
+            )
+        ).scalar_one()
+        or 0
+    )
+
+    async def unwrap_fail_reasons(since: datetime | None = None) -> list[dict[str, Any]]:
+        filters = [
+            AuditEvent.event_type == "wrap.unwrap",
+            AuditEvent.success.is_(False),
+        ]
+        if since is not None:
+            filters.append(AuditEvent.created_at >= since)
+        rows = (
+            await db.execute(
+                select(
+                    func.coalesce(reason_col, "unknown"),
+                    func.count(AuditEvent.id),
+                )
+                .where(*filters)
+                .group_by(func.coalesce(reason_col, "unknown"))
+                .order_by(func.count(AuditEvent.id).desc())
+            )
+        ).all()
+        return [
+            {"reason": str(reason or "unknown"), "count": int(count or 0)}
+            for reason, count in rows
+        ]
+
+    unwrap_fail_reasons_all = await unwrap_fail_reasons()
+    unwrap_fail_reasons_24h = await unwrap_fail_reasons(day_ago)
+
     # MinIO live objects under wraps/
     try:
         minio = await storage.prefix_stats("wraps/")
@@ -128,6 +171,7 @@ async def collect_stats(db: AsyncSession) -> dict[str, Any]:
     pending = by_status["pending"]
     consumed = by_status["consumed"]
     expired = by_status["expired"]
+    audit_unwraps_ok = audit.get("wrap.unwrap", {}).get("ok", 0)
 
     return {
         "wraps_total": int(total_wraps or 0),
@@ -137,6 +181,8 @@ async def collect_stats(db: AsyncSession) -> dict[str, Any]:
         "wraps_with_password": int(with_password or 0),
         "items_total": int(total_items or 0),
         "items_pending": pending["items"],
+        "items_consumed": consumed["items"],
+        "items_expired": expired["items"],
         "size_total_bytes": int(total_size or 0),
         "size_pending_bytes": pending["size_bytes"],
         "size_consumed_bytes": consumed["size_bytes"],
@@ -144,13 +190,18 @@ async def collect_stats(db: AsyncSession) -> dict[str, Any]:
         "size_total_human": format_bytes(int(total_size or 0)),
         "size_pending_human": format_bytes(pending["size_bytes"]),
         "size_consumed_human": format_bytes(consumed["size_bytes"]),
+        "size_expired_human": format_bytes(expired["size_bytes"]),
         "created_24h": created_24h,
         "created_7d": created_7d,
         "consumed_24h": consumed_24h,
         "audit_creates_ok": audit.get("wrap.create", {}).get("ok", 0),
         "audit_creates_fail": audit.get("wrap.create", {}).get("fail", 0),
-        "audit_unwraps_ok": audit.get("wrap.unwrap", {}).get("ok", 0),
+        "audit_unwraps_ok": audit_unwraps_ok,
         "audit_unwraps_fail": audit.get("wrap.unwrap", {}).get("fail", 0),
+        "unwraps_success": audit_unwraps_ok,
+        "password_burns": password_burns,
+        "unwrap_fail_reasons": unwrap_fail_reasons_all,
+        "unwrap_fail_reasons_24h": unwrap_fail_reasons_24h,
         "minio_objects": int(minio.get("objects") or 0),
         "minio_bytes": int(minio.get("bytes") or 0),
         "minio_human": format_bytes(int(minio.get("bytes") or 0)),

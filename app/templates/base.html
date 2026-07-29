@@ -7,10 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/app.css" />
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
-  <link rel="icon" href="/static/favicon.ico" sizes="any" />
-  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="stylesheet" href="{{ static_url('css/app.css') }}" />
+  <link rel="icon" href="{{ static_url('favicon.svg') }}" type="image/svg+xml" />
+  <link rel="icon" href="{{ static_url('favicon.ico') }}" sizes="any" />
+  <link rel="apple-touch-icon" href="{{ static_url('apple-touch-icon.png') }}" />
+  <link rel="manifest" href="{{ static_url('manifest.webmanifest') }}" />
+  <meta name="theme-color" content="#0b1020" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link id="hljs-theme-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css" />
   <link id="hljs-theme-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" disabled />
@@ -71,11 +73,11 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="/static/js/i18n.js"></script>
-  <script src="/static/js/theme.js"></script>
-  <script src="/static/js/ui.js"></script>
-  <script src="/static/js/about.js"></script>
-  <script src="/static/js/highlight-ui.js"></script>
+  <script src="{{ static_url('js/i18n.js') }}"></script>
+  <script src="{{ static_url('js/theme.js') }}"></script>
+  <script src="{{ static_url('js/ui.js') }}"></script>
+  <script src="{{ static_url('js/about.js') }}"></script>
+  <script src="{{ static_url('js/highlight-ui.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -28,15 +28,26 @@
     <article class="stat-card">
       <div class="stat-card-head">
         <i class="fa-solid fa-lock-open" aria-hidden="true"></i>
-        <h2 data-i18n="admin.stats.unwrappedTitle">Unwrapped (all time)</h2>
+        <h2 data-i18n="admin.stats.unwrappedTitle">Successful unwraps</h2>
       </div>
-      <p class="stat-value">{{ stats.wraps_consumed }}</p>
+      <p class="stat-value">{{ stats.unwraps_success }}</p>
       <p class="stat-sub">
-        <span data-i18n="admin.stats.auditOk">audit ok</span>
-        <span class="stat-num">{{ stats.audit_unwraps_ok }}</span>
+        <span data-i18n="admin.stats.dbConsumed">DB consumed</span>
+        <span class="stat-num">{{ stats.wraps_consumed }}</span>
         ·
         <span data-i18n="admin.stats.last24h">24h</span>
         <span class="stat-num">{{ stats.consumed_24h }}</span>
+      </p>
+    </article>
+
+    <article class="stat-card">
+      <div class="stat-card-head">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        <h2 data-i18n="admin.stats.passwordBurnsTitle">Burned by password</h2>
+      </div>
+      <p class="stat-value">{{ stats.password_burns }}</p>
+      <p class="stat-sub" data-i18n="admin.stats.passwordBurnsHint">
+        Destroyed after too many wrong passwords
       </p>
     </article>
 
@@ -93,13 +104,13 @@
               <td data-i18n="admin.stats.status.consumed">consumed</td>
               <td class="mono">{{ stats.wraps_consumed }}</td>
               <td class="mono">{{ stats.size_consumed_human }}</td>
-              <td class="mono">—</td>
+              <td class="mono">{{ stats.items_consumed }}</td>
             </tr>
             <tr>
               <td data-i18n="admin.stats.status.expired">expired</td>
               <td class="mono">{{ stats.wraps_expired }}</td>
-              <td class="mono">—</td>
-              <td class="mono">—</td>
+              <td class="mono">{{ stats.size_expired_human }}</td>
+              <td class="mono">{{ stats.items_expired }}</td>
             </tr>
             <tr class="stats-total-row">
               <td data-i18n="admin.stats.total">Total</td>
@@ -140,6 +151,64 @@
           <strong class="mono">{{ stats.audit_unwraps_fail }}</strong>
         </li>
       </ul>
+    </section>
+  </div>
+
+  <div class="stats-sections">
+    <section class="stats-section">
+      <h3 data-i18n="admin.stats.failReasonsSection">Unwrap fail reasons (all time)</h3>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th data-i18n="admin.stats.col.reason">Reason</th>
+              <th data-i18n="admin.stats.col.count">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if stats.unwrap_fail_reasons %}
+            {% for row in stats.unwrap_fail_reasons %}
+            <tr>
+              <td class="mono">{{ row.reason }}</td>
+              <td class="mono">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="2" class="hint" data-i18n="admin.stats.noFailReasons">No failed unwraps yet.</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="stats-section">
+      <h3 data-i18n="admin.stats.failReasons24hSection">Unwrap fail reasons (24h)</h3>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th data-i18n="admin.stats.col.reason">Reason</th>
+              <th data-i18n="admin.stats.col.count">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if stats.unwrap_fail_reasons_24h %}
+            {% for row in stats.unwrap_fail_reasons_24h %}
+            <tr>
+              <td class="mono">{{ row.reason }}</td>
+              <td class="mono">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="2" class="hint" data-i18n="admin.stats.noFailReasons">No failed unwraps yet.</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
     </section>
   </div>
 </section>

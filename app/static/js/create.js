@@ -25,8 +25,15 @@
     composer: document.querySelector(".composer"),
     shareLink: document.getElementById("share-link"),
     shareToken: document.getElementById("share-token"),
+    sharePassword: document.getElementById("share-password"),
+    passwordBlock: document.getElementById("success-password-block"),
+    shareQr: document.getElementById("share-qr"),
     expiresMeta: document.getElementById("expires-meta"),
     captchaSlot: document.getElementById("captcha-slot"),
+    sizeMeter: document.getElementById("size-meter"),
+    checkPasswordItem: document.getElementById("check-password-item"),
+    shareNative: document.getElementById("share-native"),
+    downloadQr: document.getElementById("download-qr"),
   };
 
   function showError(msg) {
@@ -100,6 +107,34 @@
     document.body.classList.remove("modal-open");
   }
 
+  function estimatePayloadBytes() {
+    const textBytes = new TextEncoder().encode(els.text?.value || "").length;
+    const fileBytes = files.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
+    return textBytes + fileBytes;
+  }
+
+  function refreshSizeMeter() {
+    if (!els.sizeMeter || !settings) return;
+    const used = estimatePayloadBytes();
+    const max = Number(settings.max_upload_bytes) || 0;
+    if (!max) {
+      els.sizeMeter.textContent = "";
+      els.sizeMeter.classList.remove("is-warn", "is-over");
+      return;
+    }
+    const fmt = window.WrappedUI.formatBytes;
+    let text = t("create.sizeMeter", {
+      used: fmt(used),
+      max: fmt(max),
+    });
+    const near = used > max * 0.85 && used <= max;
+    const over = used > max;
+    if (near) text = `${text} · ${t("create.sizeNearLimit")}`;
+    els.sizeMeter.textContent = text;
+    els.sizeMeter.classList.toggle("is-over", over);
+    els.sizeMeter.classList.toggle("is-warn", near);
+  }
+
   function renderFiles() {
     els.fileList.innerHTML = "";
     files.forEach((f, idx) => {
@@ -115,6 +150,7 @@
       li.appendChild(btn);
       els.fileList.appendChild(li);
     });
+    refreshSizeMeter();
   }
 
   function addFiles(list) {
@@ -207,6 +243,8 @@
     loadCaptcha();
     setLanguage("plaintext", { silent: true });
     refreshHighlight();
+    refreshSizeMeter();
+    syncShareControls();
   }
 
   els.dropzone.addEventListener("click", () => els.fileInput.click());
@@ -243,6 +281,7 @@
 
   els.text.addEventListener("input", () => {
     refreshHighlight();
+    refreshSizeMeter();
   });
   els.text.addEventListener("scroll", () => {
     const pre = els.highlight.parentElement;
@@ -260,11 +299,80 @@
     }
   });
 
+  function renderShareQr(link) {
+    if (!els.shareQr) return;
+    els.shareQr.innerHTML = "";
+    if (!link || typeof QRCode === "undefined") return;
+    const size = window.matchMedia("(max-width: 860px)").matches ? 200 : 164;
+    // eslint-disable-next-line no-new
+    new QRCode(els.shareQr, {
+      text: link,
+      width: size,
+      height: size,
+      colorDark: "#0d1420",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  }
+
+  function syncShareControls() {
+    if (els.shareNative) {
+      const canShare = typeof navigator.share === "function";
+      els.shareNative.classList.toggle("hidden", !canShare);
+      els.shareNative.setAttribute("aria-label", t("create.share"));
+    }
+    if (els.downloadQr) {
+      els.downloadQr.setAttribute("aria-label", t("create.downloadQr"));
+    }
+  }
+
+  function showSuccess({ link, token, password, expiresAt }) {
+    els.shareLink.value = link;
+    els.shareToken.value = token;
+    lastExpiresAt = expiresAt;
+    refreshExpiresMeta();
+    if (password) {
+      els.sharePassword.value = password;
+      els.passwordBlock.classList.remove("hidden");
+      els.checkPasswordItem?.classList.remove("hidden");
+    } else {
+      els.sharePassword.value = "";
+      els.passwordBlock.classList.add("hidden");
+      els.checkPasswordItem?.classList.add("hidden");
+    }
+    renderShareQr(link);
+    syncShareControls();
+    els.composer.classList.add("hidden");
+    els.success.classList.remove("hidden");
+    els.success.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   async function copyFrom(input, btn) {
-    await navigator.clipboard.writeText(input.value);
+    try {
+      await window.WrappedUI.copyText(input.value);
+    } catch {
+      await navigator.clipboard.writeText(input.value);
+    }
     const old = btn.textContent;
     btn.textContent = t("common.copied");
     setTimeout(() => (btn.textContent = old), 1200);
+  }
+
+  function downloadQrPng() {
+    if (!els.shareQr) return;
+    const canvas = els.shareQr.querySelector("canvas");
+    const img = els.shareQr.querySelector("img");
+    let href = "";
+    if (canvas && canvas.toDataURL) {
+      href = canvas.toDataURL("image/png");
+    } else if (img?.src) {
+      href = img.src;
+    }
+    if (!href) return;
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = "wrapped-qr.png";
+    a.click();
   }
 
   document.getElementById("copy-link").addEventListener("click", () => {
@@ -273,6 +381,22 @@
   document.getElementById("copy-token").addEventListener("click", () => {
     copyFrom(els.shareToken, document.getElementById("copy-token"));
   });
+  document.getElementById("copy-password")?.addEventListener("click", () => {
+    copyFrom(els.sharePassword, document.getElementById("copy-password"));
+  });
+  els.shareNative?.addEventListener("click", async () => {
+    if (typeof navigator.share !== "function" || !els.shareLink.value) return;
+    try {
+      await navigator.share({
+        title: t("create.shareTitle"),
+        text: t("create.shareText"),
+        url: els.shareLink.value,
+      });
+    } catch {
+      /* user cancelled or unsupported */
+    }
+  });
+  els.downloadQr?.addEventListener("click", downloadQrPng);
   document.getElementById("create-another").addEventListener("click", () => {
     location.reload();
   });
@@ -346,12 +470,12 @@
       const data = await resp.json();
       const token = window.WrappedCrypto.buildToken(data.wrap_id, keyB64url);
       const link = `${location.origin}${data.share_path}#${keyB64url}`;
-      els.shareLink.value = link;
-      els.shareToken.value = token;
-      lastExpiresAt = data.expires_at;
-      refreshExpiresMeta();
-      els.composer.classList.add("hidden");
-      els.success.classList.remove("hidden");
+      showSuccess({
+        link,
+        token,
+        password,
+        expiresAt: data.expires_at,
+      });
     } catch {
       showError(t("common.error"));
     } finally {
@@ -380,6 +504,8 @@
     window.WrappedI18n.onChange(() => {
       fillTtl();
       refreshExpiresMeta();
+      refreshSizeMeter();
+      syncShareControls();
       setLanguage(els.lang.value, { silent: true });
       refreshHighlight();
       if (els.langChipText) els.langChipText.textContent = langLabel(els.lang.value);

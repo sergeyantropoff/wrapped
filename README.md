@@ -338,16 +338,27 @@ services:
 
 Ключ в `#fragment` не уходит на сервер в запросе страницы.
 
+### UX (v0.1.3+)
+
+- После создания: **QR** на share-link, **скачать QR (PNG)**, **Web Share** (если есть `navigator.share`), чеклист и trust-строка про `#key`; отдельные кнопки Copy для ссылки / токена / пароля; пароль не советуется слать в той же переписке.
+- Create: счётчик размера `≈ used / max` и предупреждение near-limit (сверх лимита — `create.tooLarge`).
+- Unwrap: Enter в поле пароля отправляет форму; после `password_required` / `bad_password` — focus+select; при ≥2 элементах — **скачать всё** (zip через JSZip); trust-строка на результате; спокойный экран «ссылка недоступна» для already used / expired (anti-enumeration); отдельные состояния для `password_locked`, rate limit, CAPTCHA, ошибки расшифровки.
+- Картинки после unwrap: inline-превью и **lightbox** (тап/клик).
+- Тема при первом визите следует `prefers-color-scheme` (пока нет выбора в `localStorage`); лёгкий haptic после успешного Copy.
+- Минимальный **PWA**: `manifest.webmanifest` (без Service Worker для API).
+- UI строки EN/RU через `i18n.js`.
+- Статика (`/static/...`) отдаётся с `?v=версия.mtime` (cache-bust после деплоя).
+
 ---
 
 ## Админка
 
-Логин: `/admin/login`. После входа — **Статистика** (`/admin/stats`).
+Логин: `/admin/login`. После входа — **Статистика** (`/admin/stats`). На мобиле меню — через гамбургер.
 
 | Раздел | URL | Что делает |
 |--------|-----|------------|
-| **Статистика** | `/admin/stats` | MinIO: объём и число объектов нерасшифрованного ciphertext; расшифровано / pending; загрузки и items за всё время; таблица по статусам wraps; с паролем; создано за 24ч/7д; счётчики audit (create/unwrap ok/fail) |
-| **Настройки** | `/admin/settings` | Limits (upload, TTL, retention audit), rate limits, MIME allowlist, пароль (режим + лимит попыток), CAPTCHA |
+| **Статистика** | `/admin/stats` | MinIO pending ciphertext; успешные unwrap vs сожжения паролем; pending / uploads; таблица статусов (count/size/items); with password; 24h/7d creates; audit create/unwrap; разбивка fail-причин unwrap (all-time и 24h) |
+| **Настройки** | `/admin/settings` | Limits (upload, TTL, retention audit), rate limits, MIME allowlist (в т.ч. YAML / `application/octet-stream` для kubeconfig и неизвестных типов), пароль, CAPTCHA |
 | **Аудит** | `/admin/audit` | Фильтры, пагинация (10/25/50/100), номера страниц, кнопка **Очистить** (с подтверждением; пишется событие `admin.audit_clear`) |
 | **Опасная зона** | `/admin/danger` | Полная очистка wraps и объектов в MinIO (`PURGE`) |
 
@@ -452,7 +463,7 @@ Credentials (Global, как в job’ах):
 | ID | Тип | Назначение |
 |----|-----|------------|
 | `ssh-gitea-key` | SSH Username with private key | SCM checkout |
-| `gitea-jenkins-token` | Secret text / token | API Gitea (webhook/API при необходимости) |
+| `gitea-jenkins-token` | Secret text (Gitea PAT) | SCM/API Gitea. Для commit status из Multibranch нужен scope **`write:repository`** (сейчас при read-only в логе: `Could not send notifications` / 403/405). Checkout достаточно `read:repository` |
 | `harbor-devops-tools-push-pull-access` | Username/password | Harbor `devops-tools` (robot) |
 | `docker-hub` | Username/password | Docker Hub `inecs` |
 | `k3s-kubeconfig` | Secret file | Helm/kubectl deploy в K3S |

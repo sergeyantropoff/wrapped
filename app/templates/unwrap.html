@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero-panel unwrap-panel">
-  <div class="panel-head">
+  <div class="panel-head" id="unwrap-head">
     <p class="eyebrow" data-i18n="unwrap.eyebrow">Unwrap</p>
     <h1 data-i18n="unwrap.title">Reveal once</h1>
     <p class="lede" data-i18n="unwrap.lede">Paste a wrapped token or open a share link. Ciphertext is fetched once and deleted from the server.</p>
@@ -32,6 +32,15 @@
     </div>
   </div>
 
+  <div id="unwrap-state" class="unwrap-state hidden" role="status">
+    <div class="unwrap-state-icon" aria-hidden="true">
+      <i class="fa-solid fa-link-slash" id="unwrap-state-fa"></i>
+    </div>
+    <h2 id="unwrap-state-title"></h2>
+    <p class="lede" id="unwrap-state-hint"></p>
+    <a class="btn primary" href="/" data-i18n="unwrap.createOwn">Create your own wrap</a>
+  </div>
+
   <div id="result-panel" class="result-panel hidden">
     <div class="success-callout" role="status">
       <span class="success-callout-icon" aria-hidden="true">
@@ -42,11 +51,26 @@
         <span data-i18n="unwrap.destroyedHint">Preview lives only in this browser session.</span>
       </span>
     </div>
+    <p class="hint success-trust" data-i18n="unwrap.trustKey">
+      The key was only in the link #fragment and was never sent to the server.
+    </p>
+    <div class="result-actions">
+      <button type="button" class="btn hidden" id="download-all" data-i18n="unwrap.downloadAll">Download all</button>
+    </div>
     <div id="items" class="items"></div>
   </div>
 </section>
+
+<div id="image-lightbox" class="image-lightbox hidden" role="dialog" aria-modal="true" aria-label="Image preview">
+  <button type="button" class="image-lightbox-close" id="lightbox-close" aria-label="Close">
+    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+  </button>
+  <img id="lightbox-img" alt="" />
+  <p class="image-lightbox-caption" id="lightbox-caption"></p>
+</div>
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/crypto.js"></script>
-<script src="/static/js/unwrap.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{{ static_url('js/crypto.js') }}"></script>
+<script src="{{ static_url('js/unwrap.js') }}"></script>
 {% endblock %}

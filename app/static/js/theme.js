@@ -1,8 +1,14 @@
 (() => {
   const KEY = "wrapped.theme";
 
+  function systemTheme() {
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+
   function preferred() {
-    return localStorage.getItem(KEY) || "dark";
+    const stored = localStorage.getItem(KEY);
+    if (stored === "light" || stored === "dark") return stored;
+    return systemTheme();
   }
 
   function apply(theme) {
@@ -16,7 +22,8 @@
   }
 
   function toggle() {
-    const next = preferred() === "dark" ? "light" : "dark";
+    const current = document.documentElement.getAttribute("data-theme") || preferred();
+    const next = current === "dark" ? "light" : "dark";
     localStorage.setItem(KEY, next);
     apply(next);
   }

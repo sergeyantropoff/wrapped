@@ -7,15 +7,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/css/app.css" />
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
-  <link rel="icon" href="/static/favicon.ico" sizes="any" />
-  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
+  <link rel="stylesheet" href="{{ static_url('css/app.css') }}" />
+  <link rel="icon" href="{{ static_url('favicon.svg') }}" type="image/svg+xml" />
+  <link rel="icon" href="{{ static_url('favicon.ico') }}" sizes="any" />
+  <link rel="apple-touch-icon" href="{{ static_url('apple-touch-icon.png') }}" />
+  <link rel="manifest" href="{{ static_url('manifest.webmanifest') }}" />
+  <meta name="theme-color" content="#0b1020" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body class="admin-body">
   <div class="bg-grid" aria-hidden="true"></div>
-  <header class="admin-top">
+  <header class="admin-top" id="admin-top">
     <a class="brand" href="/admin">
       <span class="brand-mark" aria-hidden="true">
         <i class="fa-solid fa-shield-halved"></i>
@@ -25,35 +27,46 @@
         <span class="brand-tagline" data-i18n="admin.brand.tagline">Admin console</span>
       </span>
     </a>
-    <div class="admin-top-right">
-      <nav class="admin-nav" aria-label="Admin">
-        <a href="/admin/stats" class="admin-nav-link {% if active == 'stats' %}active{% endif %}">
-          <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
-          <span data-i18n="admin.nav.stats">Stats</span>
-        </a>
-        <a href="/admin/settings" class="admin-nav-link {% if active == 'settings' %}active{% endif %}">
-          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-          <span data-i18n="admin.nav.settings">Settings</span>
-        </a>
-        <a href="/admin/audit" class="admin-nav-link {% if active == 'audit' %}active{% endif %}">
-          <i class="fa-solid fa-list" aria-hidden="true"></i>
-          <span data-i18n="admin.nav.audit">Audit</span>
-        </a>
-        <a href="/admin/danger" class="admin-nav-link admin-nav-danger {% if active == 'danger' %}active{% endif %}">
-          <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-          <span data-i18n="admin.nav.danger">Danger</span>
-        </a>
-        <a href="/" class="admin-nav-link" target="_blank" rel="noopener noreferrer">
-          <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-          <span data-i18n="admin.nav.site">Site</span>
-        </a>
-        <form method="post" action="/admin/logout" class="inline">
-          <button class="admin-nav-link admin-nav-logout" type="submit">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span data-i18n="admin.nav.logout">Logout</span>
-          </button>
-        </form>
-      </nav>
+    <nav class="admin-nav" id="admin-nav" aria-label="Admin">
+      <a href="/admin/stats" class="admin-nav-link {% if active == 'stats' %}active{% endif %}">
+        <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+        <span data-i18n="admin.nav.stats">Stats</span>
+      </a>
+      <a href="/admin/settings" class="admin-nav-link {% if active == 'settings' %}active{% endif %}">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        <span data-i18n="admin.nav.settings">Settings</span>
+      </a>
+      <a href="/admin/audit" class="admin-nav-link {% if active == 'audit' %}active{% endif %}">
+        <i class="fa-solid fa-list" aria-hidden="true"></i>
+        <span data-i18n="admin.nav.audit">Audit</span>
+      </a>
+      <a href="/admin/danger" class="admin-nav-link admin-nav-danger {% if active == 'danger' %}active{% endif %}">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <span data-i18n="admin.nav.danger">Danger</span>
+      </a>
+      <a href="/" class="admin-nav-link" target="_blank" rel="noopener noreferrer">
+        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        <span data-i18n="admin.nav.site">Site</span>
+      </a>
+      <form method="post" action="/admin/logout" class="inline admin-nav-logout-form">
+        <button class="admin-nav-link admin-nav-logout" type="submit">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span data-i18n="admin.nav.logout">Logout</span>
+        </button>
+      </form>
+    </nav>
+    <div class="admin-top-tools">
+      <button
+        type="button"
+        class="icon-btn admin-nav-toggle"
+        id="admin-nav-toggle"
+        aria-controls="admin-nav"
+        aria-expanded="false"
+        title="Menu"
+        aria-label="Menu"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
       <div class="top-actions">
         <button type="button" class="icon-btn" id="lang-toggle" title="Language" aria-label="Language">
           <span id="lang-label">RU</span>
@@ -69,9 +82,10 @@
     <h1 data-i18n="{% if active == 'stats' %}admin.stats.title{% elif active == 'audit' %}admin.audit.title{% elif active == 'danger' %}admin.danger.title{% else %}admin.settings.title{% endif %}">{{ title }}</h1>
     {% block admin_content %}{% endblock %}
   </main>
-  <script src="/static/js/i18n.js"></script>
-  <script src="/static/js/theme.js"></script>
-  <script src="/static/js/modal.js"></script>
+  <script src="{{ static_url('js/i18n.js') }}"></script>
+  <script src="{{ static_url('js/theme.js') }}"></script>
+  <script src="{{ static_url('js/modal.js') }}"></script>
+  <script src="{{ static_url('js/admin-nav.js') }}"></script>
   {% block admin_scripts %}{% endblock %}
 </body>
 </html>

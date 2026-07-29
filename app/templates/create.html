@@ -24,6 +24,7 @@
       <input id="file-input" type="file" multiple hidden />
     </div>
     <ul id="file-list" class="file-list"></ul>
+    <p id="size-meter" class="size-meter hint" aria-live="polite"></p>
 
     <div class="grid-2">
       <div class="field">
@@ -64,17 +65,59 @@
         <span data-i18n="create.successWarnHint">After opening, ciphertext is deleted on the server.</span>
       </span>
     </div>
-    <label data-i18n="create.shareLink">Share link</label>
-    <div class="copy-row">
-      <input id="share-link" readonly />
-      <button type="button" class="btn" id="copy-link" data-i18n="common.copy">Copy</button>
+
+    <ul class="success-checklist" id="success-checklist">
+      <li data-i18n="create.checkLink">Copy the share link</li>
+      <li id="check-password-item" class="hidden" data-i18n="create.checkPassword">Send the password in a separate message</li>
+      <li data-i18n="create.checkExpires">Note the expiry time</li>
+    </ul>
+    <p class="hint success-trust" data-i18n="create.trustKey">
+      The encryption key lives only in the link #fragment — the server never sees it.
+    </p>
+
+    <div class="success-layout">
+      <div class="success-main">
+        <div id="success-password-block" class="success-password-block hidden">
+          <div class="success-password-badge" role="status">
+            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+            <span data-i18n="create.passwordProtected">Password protected</span>
+          </div>
+          <label for="share-password" data-i18n="create.sharePassword">Password</label>
+          <div class="copy-row">
+            <input id="share-password" class="mono" readonly autocomplete="off" />
+            <button type="button" class="btn" id="copy-password" data-i18n="common.copy">Copy</button>
+          </div>
+          <p class="hint success-password-hint" data-i18n="create.passwordSeparateHint">
+            Do not send the password in the same chat as the link.
+          </p>
+        </div>
+
+        <label for="share-link" data-i18n="create.shareLink">Share link</label>
+        <div class="copy-row">
+          <input id="share-link" readonly />
+          <button type="button" class="btn" id="copy-link" data-i18n="common.copy">Copy</button>
+        </div>
+
+        <label for="share-token" data-i18n="create.token">Wrapped token</label>
+        <div class="copy-row">
+          <input id="share-token" class="mono" readonly />
+          <button type="button" class="btn" id="copy-token" data-i18n="common.copy">Copy</button>
+        </div>
+
+        <div class="success-actions">
+          <button type="button" class="btn hidden" id="share-native" data-i18n="create.share">Share</button>
+          <button type="button" class="btn" id="download-qr" data-i18n="create.downloadQr">Download QR</button>
+        </div>
+
+        <p class="expires-meta" id="expires-meta"></p>
+      </div>
+
+      <div class="success-qr" aria-label="QR code">
+        <div id="share-qr" class="share-qr"></div>
+        <p class="hint success-qr-hint" data-i18n="create.qrHint">Scan to open the share link</p>
+      </div>
     </div>
-    <label data-i18n="create.token">Wrapped token</label>
-    <div class="copy-row">
-      <input id="share-token" class="mono" readonly />
-      <button type="button" class="btn" id="copy-token" data-i18n="common.copy">Copy</button>
-    </div>
-    <p class="expires-meta" id="expires-meta"></p>
+
     <button type="button" class="btn ghost" id="create-another" data-i18n="create.another">Create another</button>
   </div>
 </section>
@@ -92,6 +135,7 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/crypto.js"></script>
-<script src="/static/js/create.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{{ static_url('js/crypto.js') }}"></script>
+<script src="{{ static_url('js/create.js') }}"></script>
 {% endblock %}

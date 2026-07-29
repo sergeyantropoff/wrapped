@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.services.settings_service import get_or_create_settings
 from app.services.storage import storage
+from app.static_url import static_url
 from app.version import get_app_version, get_app_version_label
 
 OPENAPI_TAGS = [
@@ -102,8 +103,10 @@ def create_app() -> FastAPI:
     # Callables so Jinja re-reads VERSION (dev mount / after bump) on each render
     templates.env.globals["app_version"] = get_app_version
     templates.env.globals["app_version_label"] = get_app_version_label
+    templates.env.globals["static_url"] = static_url
     admin.templates.env.globals["app_version"] = get_app_version
     admin.templates.env.globals["app_version_label"] = get_app_version_label
+    admin.templates.env.globals["static_url"] = static_url
 
     @app.get("/health", tags=["System"], summary="Health check", include_in_schema=docs_on)
     async def health():
