@@ -66,15 +66,6 @@
       </span>
     </div>
 
-    <ul class="success-checklist" id="success-checklist">
-      <li data-i18n="create.checkLink">Copy the share link</li>
-      <li id="check-password-item" class="hidden" data-i18n="create.checkPassword">Send the password in a separate message</li>
-      <li data-i18n="create.checkExpires">Note the expiry time</li>
-    </ul>
-    <p class="hint success-trust" data-i18n="create.trustKey">
-      The encryption key lives only in the link #fragment — the server never sees it.
-    </p>
-
     <div class="success-layout">
       <div class="success-main">
         <div id="success-password-block" class="success-password-block hidden">
@@ -103,20 +94,27 @@
           <input id="share-token" class="mono" readonly />
           <button type="button" class="btn" id="copy-token" data-i18n="common.copy">Copy</button>
         </div>
-
-        <div class="success-actions">
-          <button type="button" class="btn hidden" id="share-native" data-i18n="create.share">Share</button>
-          <button type="button" class="btn" id="download-qr" data-i18n="create.downloadQr">Download QR</button>
-        </div>
-
-        <p class="expires-meta" id="expires-meta"></p>
       </div>
 
       <div class="success-qr" aria-label="QR code">
         <div id="share-qr" class="share-qr"></div>
         <p class="hint success-qr-hint" data-i18n="create.qrHint">Scan to open the share link</p>
+        <div class="success-qr-actions">
+          <button type="button" class="qr-action-btn hidden" id="share-native" aria-describedby="share-native-tip">
+            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+            <span class="sr-only" data-i18n="create.share">Share</span>
+            <span class="ui-tooltip" id="share-native-tip" role="tooltip" data-i18n="create.share">Share</span>
+          </button>
+          <button type="button" class="qr-action-btn" id="download-qr" aria-describedby="download-qr-tip">
+            <i class="fa-solid fa-download" aria-hidden="true"></i>
+            <span class="sr-only" data-i18n="create.downloadQr">Download QR</span>
+            <span class="ui-tooltip" id="download-qr-tip" role="tooltip" data-i18n="create.downloadQr">Download QR</span>
+          </button>
+        </div>
       </div>
     </div>
+
+    <p class="expires-meta" id="expires-meta"></p>
 
     <button type="button" class="btn ghost" id="create-another" data-i18n="create.another">Create another</button>
   </div>

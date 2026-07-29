@@ -340,7 +340,7 @@ services:
 
 ### UX (v0.1.3+)
 
-- После создания: **QR** на share-link, **скачать QR (PNG)**, **Web Share** (если есть `navigator.share`), чеклист и trust-строка про `#key`; отдельные кнопки Copy для ссылки / токена / пароля; пароль не советуется слать в той же переписке.
+- После создания: **QR** на share-link, иконки **скачать QR (PNG)** и **Web Share** (если есть `navigator.share`) под QR; отдельные кнопки Copy для ссылки / токена / пароля; пароль не советуется слать в той же переписке.
 - Create: счётчик размера `≈ used / max` и предупреждение near-limit (сверх лимита — `create.tooLarge`).
 - Unwrap: Enter в поле пароля отправляет форму; после `password_required` / `bad_password` — focus+select; при ≥2 элементах — **скачать всё** (zip через JSZip); trust-строка на результате; спокойный экран «ссылка недоступна» для already used / expired (anti-enumeration); отдельные состояния для `password_locked`, rate limit, CAPTCHA, ошибки расшифровки.
 - Картинки после unwrap: inline-превью и **lightbox** (тап/клик).
@@ -452,8 +452,8 @@ docker buildx build \
 | Где | Поведение |
 |-----|-----------|
 | UI (модалка «?») | бейдж `vX.Y.Z` |
-| `make bump-patch` / `bump-minor` | ручной bump |
-| `make push` | автоматически `bump-patch`, затем commit/push |
+| `make bump-patch` / `bump-minor` | ручной bump (по желанию) |
+| `make push` | commit/push **без** auto-bump |
 | Jenkins (`Jenkinsfile`) | читает `VERSION` из коммита **без** доп. bump → те же теги в образе и на кластере |
 
 Что в `VERSION` запушили — то и уйдёт в Harbor/Hub/деплой (и в футер модалки внутри образа).

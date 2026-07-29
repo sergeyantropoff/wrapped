@@ -31,7 +31,6 @@
     expiresMeta: document.getElementById("expires-meta"),
     captchaSlot: document.getElementById("captcha-slot"),
     sizeMeter: document.getElementById("size-meter"),
-    checkPasswordItem: document.getElementById("check-password-item"),
     shareNative: document.getElementById("share-native"),
     downloadQr: document.getElementById("download-qr"),
   };
@@ -334,11 +333,9 @@
     if (password) {
       els.sharePassword.value = password;
       els.passwordBlock.classList.remove("hidden");
-      els.checkPasswordItem?.classList.remove("hidden");
     } else {
       els.sharePassword.value = "";
       els.passwordBlock.classList.add("hidden");
-      els.checkPasswordItem?.classList.add("hidden");
     }
     renderShareQr(link);
     syncShareControls();

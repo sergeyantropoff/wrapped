@@ -32,7 +32,7 @@ help:
 	@echo "  make bump-minor   VERSION +0.1.0"
 	@echo "  make release      Multi-arch build & push $(FULL_IMAGE)"
 	@echo "                    platforms: $(RELEASE_PLATFORMS)"
-	@echo "  make push         bump-patch + git add/commit (prompt) + push"
+	@echo "  make push         git add/commit (prompt) + push (без auto-bump)"
 	@echo "  make helm-lint    Lint Helm chart"
 	@echo "  make helm-package Package Helm chart"
 	@echo "  make clean        Remove containers, volumes, local image"
@@ -136,7 +136,7 @@ clean:
 	-docker buildx rm $(BUILDX_BUILDER) 2>/dev/null || true
 	rm -rf dist
 
-# Same flow as proxmox_api_simulator / infra: bump SemVer, stage, multiline commit, push.
+# Ручной SemVer (не вызывается из make push).
 bump-patch:
 	@PYTHONPATH=. python3 scripts/bump_version.py patch
 	@echo "VERSION → $$(cat VERSION)"
@@ -153,7 +153,7 @@ version-commit:
 		git commit -m "Bump version to $$(cat VERSION)."; \
 	fi
 
-push: bump-patch
+push:
 	@set -e; \
 	git add .; \
 	echo "=== staged ==="; \

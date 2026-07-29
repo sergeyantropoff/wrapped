@@ -5,7 +5,7 @@
 // 2) при успехе — trigger Deploy с wait:false и agent none → Builder-под умирает
 // 3) Deploy стартует отдельно уже без Builder
 //
-// Версия образа = VERSION из коммита. Bump: make bump-patch / make push.
+// Версия образа = VERSION из коммита (без auto-bump). Ручной bump: make bump-patch.
 //
 // Credentials (Global):
 //   harbor-devops-tools-push-pull-access — Harbor devops-tools (robot)
